@@ -4,6 +4,8 @@ set -e; base="$1"; src="$2"; a="$base/session-end-app"; rm -rf "$a"; cp -R "$src
 export GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=f@x.io GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=f@x.io
 git checkout -q -- src/db.ts            # drop the dirty db change from the stale fixture
 git checkout -q feat/auth-refresh
+# the open step already carries (in progress) from an earlier exit: exit must not add a second one
+sed -i "" "s|^  - \[ \] issue a new access token\(.*\)\$|  - [ ] issue a new access token\1 (in progress)|" ROADMAP.md
 # work done this session, committed: real expiry test
 cat > src/auth.test.ts <<'EOF'
 import { describe, it, expect } from "vitest";

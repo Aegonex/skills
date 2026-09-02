@@ -9,18 +9,29 @@ This repository contains instructions and empty templates only. Project state
 
 ## Skills
 
-| Skill | Use when |
-|---|---|
-| `aegonex-init` | starting a work session on a project (first time or every day) |
-| `aegonex-exit` | closing a work session: reconcile ROADMAP.md, rewrite HANDOFF.md, leave the entry point for the next session |
+Five verbs, one lifecycle: open a session, plan a milestone, note what git
+cannot reconstruct, close the session, close the milestone.
+
+| Skill | Use when | Writes |
+|---|---|---|
+| `aegonex-init` | a session starts: briefs from AGENTS.md, ROADMAP.md, HANDOFF.md and git, proposes one first step, waits for go | `AGENTS.md`, `CLAUDE.md` when missing, only after go |
+| `aegonex-plan` | the next milestone needs planning: at most seven questions, one at a time | `ROADMAP.md`, every step with a `done when` |
+| `aegonex-note` | a decision, a dead end or an environment fact appears, mid-session | one line under `## Session log` in `HANDOFF.md`, no question asked |
+| `aegonex-exit` | a session ends or is handed off | `HANDOFF.md` whole, `ROADMAP.md` ticks and decisions, proposes the commit |
+| `aegonex-done` | a milestone is finished | runs its checks, collapses it in `ROADMAP.md`, puts its documents in the proposed commit command for deletion |
+
+Design and contracts: `docs/design.md`. How the skills are tested:
+`docs/testing.md`.
 
 ## Install
 
 ```bash
 # one machine, all detected agents
-npx skills add Aegonex/skills@aegonex-init -g
+for s in init plan note exit done; do npx skills add Aegonex/skills@aegonex-$s -g; done
 
 # development: link the working copy so edits are live everywhere
-ln -s "$PWD/skills/aegonex-init" ~/.agents/skills/aegonex-init
-ln -s ../../.agents/skills/aegonex-init ~/.claude/skills/aegonex-init
+for s in init plan note exit done; do
+  ln -s "$PWD/skills/aegonex-$s" ~/.agents/skills/aegonex-$s
+  ln -s ../../.agents/skills/aegonex-$s ~/.claude/skills/aegonex-$s
+done
 ```

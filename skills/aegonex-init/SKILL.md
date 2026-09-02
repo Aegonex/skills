@@ -4,7 +4,7 @@ description: Use when a work session starts on a project — the first message o
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # aegonex-init
@@ -12,39 +12,44 @@ metadata:
 ## Overview
 
 Every session opens through this skill. It rebuilds the working picture from
-three files in the project repo plus git, then hands the user one decision.
+the state files in the project repo plus git, then hands the user one
+decision. It reads. It never modifies a file that exists, and it writes
+nothing at all before the user answers the brief's question.
 
 Core principle: **git is the truth, the files are testimony.** Whenever they
 disagree, the disagreement is reported, never silently resolved.
 
-The three files, each with its own rate of change:
+The state files, each with its own owner and rate of change:
 
-| File | Answers | Changes |
+| File | Answers | Written by |
 |---|---|---|
-| `AGENTS.md` | stack, commands, rules, session ritual | rarely |
-| `ROADMAP.md` | what we are building, why, which milestone is current | per milestone |
-| `HANDOFF.md` | where the last session stopped, the next step, dead ends | every session |
+| `AGENTS.md` | stack, commands, rules, session ritual | init creates it once; the user edits it |
+| `ROADMAP.md` | goal, milestones, steps with `done when` | `aegonex-plan` |
+| `HANDOFF.md` | where the last session stopped, the next step, dead ends | `aegonex-exit` |
+| `CLAUDE.md` | one line pointing at `AGENTS.md` | init creates it once |
 
-`CLAUDE.md` is only a pointer to `AGENTS.md`. Spot-level state lives in the
-code as anchor comments: `AIDEV-TODO:` (pending work at that spot) and
-`AIDEV-NOTE:` (an invariant that must survive edits).
+Spot-level state lives in the code as anchor comments: `AIDEV-TODO:`
+(pending work at that spot) and `AIDEV-NOTE:` (an invariant that must
+survive edits). Sibling verbs: `aegonex-plan` writes the roadmap,
+`aegonex-note` records a decision or dead end the moment it happens,
+`aegonex-exit` closes a session, `aegonex-done` closes a milestone.
 
 ## When to use
 
 - The user opens a session: "เริ่มงาน", "start", "where were we", "ต่อจากเมื่อวาน".
-- A project has none, or only some, of the three files.
+- A project has none, or only some, of the state files.
 - Context was just compacted and the working picture is gone.
 
-Not for: ending a session (that is `aegonex-exit`), or mid-session questions
-about code.
+Not for: ending a session (`aegonex-exit`), planning (`aegonex-plan`), or
+mid-session questions about code.
 
 ## Procedure
 
-Run the steps in order. The whole procedure reads the three files, runs the
-git commands listed in steps 1 and 4, and runs one grep. It opens no source
-file: `git diff` output on a file that `git status` listed is git output and
-is allowed; opening `src/…` or any other code file is not, until the user
-says go.
+Run the steps in order. Before `go?` the procedure reads only: the four
+state files, manifests (`package.json`, `pyproject.toml`, `go.mod`,
+`Cargo.toml` and the like), `README.md`, `CONTRIBUTING.md`, and this
+skill's own files. `git diff` on a file that `git status` listed is git
+output and is allowed; opening `src/…` or any other code file is not.
 
 ### 1. Git facts
 
@@ -56,18 +61,22 @@ git status --short                   # uncommitted work
 git log --oneline -5
 ```
 
-### 2. Find the three files at the project root
+### 2. The state files at the project root
 
-| Found | Do |
-|---|---|
-| none of the three | Read `references/scaffold.md` and follow it. Then continue at step 3 with the fresh files. |
-| some missing | Create only the missing ones from `assets/` (see `references/scaffold.md`, section "Partial"). Note them in the brief. Continue. |
-| all three | Read `HANDOFF.md`, then `ROADMAP.md`. `AGENTS.md` is already loaded by most agents; read it only if it was not. |
+| File | Missing | Present |
+|---|---|---|
+| `AGENTS.md` | derive its content now (`references/scaffold.md`), list it under `missing:` in the brief, create it only after go | read it if the harness did not already load it |
+| `CLAUDE.md` | same as `AGENTS.md`; if the file exists without the pointer line, the line is appended after go | nothing |
+| `ROADMAP.md` | the `ROADMAP:` line reads `none — aegonex-plan creates it` | read it: the current milestone is the first unticked `- [ ] M…` line; count its `- [ ]`/`- [x]` steps (the `docs:` line is not a step) |
+| `HANDOFF.md` | the `HANDOFF:` line reads `none — the first aegonex-exit creates it`; drift checks that need it are skipped | read it |
+
+Init never creates `ROADMAP.md` or `HANDOFF.md`, never asks planning
+questions, and never edits a file that exists.
 
 ### 3. Anchors
 
 ```bash
-grep -rn --exclude-dir={node_modules,.git,dist,build,vendor,target} -E "AIDEV-(TODO|NOTE|QUESTION)" .
+grep -rn --exclude-dir={node_modules,.git,dist,build,vendor,target} --exclude={AGENTS.md,CLAUDE.md,ROADMAP.md,HANDOFF.md} -E "AIDEV-(TODO|NOTE)" .
 ```
 
 Count TODOs and NOTEs. Keep the three most relevant TODOs as `file:line — text`.
@@ -76,59 +85,72 @@ with `cat`, `head`, `sed` or a file-read tool; context arrives after `go?`.
 
 ### 4. Drift checks (required)
 
-Each check that is true becomes one line under ⚠️ in the brief. If none is
-true the line says `none`.
+Each check that is true becomes one line under `Drift:` in the brief. If none
+is true the line says `none`. A drift line names its evidence: the two
+branch names, the commit list, the file list, the line count. "HANDOFF looks
+out of date" without evidence is not a drift line.
 
 | Check | How |
 |---|---|
 | Branch mismatch | `Branch:` in HANDOFF.md ≠ `git branch --show-current` |
-| Commits after the handoff | `git log --oneline <HEAD-in-HANDOFF>..HEAD -- . ':!HANDOFF.md' ':!ROADMAP.md'` is non-empty. Commits that only touch `HANDOFF.md`/`ROADMAP.md` are the handoff being committed and are not drift. If HANDOFF.md has no HEAD line, `git log --oneline --since="<HANDOFF date>" -- . ':!HANDOFF.md' ':!ROADMAP.md'` lists them; quote that list, nothing older. |
-| Unrecorded work | `git status --short` lists files that HANDOFF.md does not mention. Characterise each with `git diff --stat` or `git diff <file>` in a few words (what changed), not by opening the file. |
-| Oversized handoff | HANDOFF.md is longer than 60 lines (the last `aegonex-exit` was sloppy) |
-
-A drift line names the evidence: the two branch names, the newer commits, the
-unmentioned files. "HANDOFF looks out of date" without evidence is not a drift
-line.
+| Commits after the handoff | `H` = the sha after `HEAD:` in HANDOFF.md. If `git cat-file -e H` succeeds, `git log --oneline --name-only H..HEAD`; if it fails (rebase, squash, shallow clone) or there is no `HEAD:` line, `git log --oneline --name-only --since="<HANDOFF date> 00:00"` (a bare date means today's time of day). From that list drop the oldest commit whose files include `HANDOFF.md`: that is the handoff commit, whatever else it touches. Also drop commits whose only files are `HANDOFF.md` and/or `ROADMAP.md`. Whatever remains is drift; quote it, nothing older. |
+| Unrecorded work | `git status --short` lists files HANDOFF.md does not mention. Characterise each with `git diff --stat` or `git diff <file>` in a few words (what changed), not by opening the file. |
+| Session ended without exit | HANDOFF.md contains `## Session log`. Exit always removes that section, so its presence means the last session (or this one, before a compaction) never reached exit. Count its `- ` lines; they are testimony for the first step. |
+| Oversized handoff | HANDOFF.md is longer than 60 lines |
 
 ### 5. The brief
 
 Print exactly this shape, then stop and wait. Fifteen lines at most, one
-question at the end, nothing before 📍 and nothing after the question.
+question at the end, nothing before `Repo:` and nothing after the question
+except the closing line.
 
 ```
-📍 <project> · <branch> · HEAD <sha> · tree: clean | <n> modified: <files, max 3>
-🧭 ROADMAP: <current milestone> — <done>/<total> steps
-🔁 HANDOFF (<date>, <branch>): stopped at <…> · next: <…> · dead ends: <n>
-📌 Anchors: <n> TODO · <n> NOTE — <top 3 TODOs as file:line — text>
-⚠️ Drift: <one line per finding with evidence> | none
-▶️ First step: <one concrete action> — go?
+Repo: <project> · <branch> · HEAD <sha> · tree: clean | <n> modified: <files, max 3> [· missing: <files>]
+ROADMAP: <current milestone> — <done>/<total> steps | none — aegonex-plan creates it
+HANDOFF (<date>, <branch>): stopped at <…> · next: <…> · dead ends: <n> | none — the first aegonex-exit creates it
+Anchors: <n> TODO · <n> NOTE — <top 3 TODOs as file:line — text>
+Drift: <one line per finding with evidence> | none
+First step: <one concrete action> — go?
 ```
 
 Rules for the brief:
-- One first step, not a menu. When drift makes two candidates plausible (the
-  handoff says X, the working tree shows Y), the ⚠️ line states both and
-  the ▶️ line picks the one the working tree supports, saying why in five
-  words.
+- Each line starts with its label in plain text. No emoji, icon or bullet
+  precedes a label.
+- `First step:` is chosen in this order; the first match wins:
+  1. the working tree has changes HANDOFF.md does not mention: inspect
+     them, naming the files;
+  2. HANDOFF.md names a next step: that step (a session log, if present,
+     may sharpen it: quote the log line);
+  3. ROADMAP.md has an unticked step in the current milestone: the first
+     one, with its `done when`;
+  4. otherwise `run aegonex-plan` (no roadmap, or the current milestone has
+     no unticked step).
+- One first step, not a menu. When drift makes two candidates plausible,
+  the `Drift:` line states both and `First step:` picks the one the
+  working tree supports, saying why in five words.
 - Anything the user typed beyond the invocation ("start work on auth",
-  "เริ่มงาน ทำ login ต่อ") is today's focus: it shapes the ▶️ line. It is not
-  permission to start.
-- On a fresh project the order is: the six lines (📍 ends with `created:
-  <files>`, 🔁 reads `HANDOFF: fresh start`, ▶️ reads `answer the three
-  questions below, then start M1 — go?`), then the three scaffold questions,
-  then the closing line. The brief is never replaced by prose.
-- The final line of the message, after the question, names the closer in
-  the user's language, once: `จบงานเรียก aegonex-exit` when the user writes
-  Thai, `end with aegonex-exit` otherwise.
+  "เริ่มงาน ทำ login ต่อ") is today's focus: it reshapes `First step:`. It
+  is not permission to start.
+- Missing `AGENTS.md`/`CLAUDE.md`: `Repo:` ends with `missing: <files>` and
+  `First step:` reads `create <files>, then <the step chosen above> — go?`
+  (with no roadmap: `create <files>, then run aegonex-plan — go?`).
+- The closing line, after the question, names the closer in the user's
+  language, once: `จบงานเรียก aegonex-exit` when the user writes Thai,
+  `end with aegonex-exit` otherwise.
 
-### 6. Stop
+### 6. Stop, then act on the answer
 
 No code is read, written or run until the user answers the question. If the
-answer changes the plan, update the ▶️ line in one sentence and proceed.
+answer changes the plan, update `First step:` in one sentence and proceed.
+
+On go with files under `missing:`, write exactly those files from
+`references/scaffold.md`, say `created: <files>` in one line, and if the
+step was `run aegonex-plan`, name it and stop: init does not plan.
 
 Before printing the brief, check the list of files opened. It contains only
-`AGENTS.md`, `ROADMAP.md`, `HANDOFF.md`, manifests (`package.json` and the
-like) and this skill's own files. Anything else means the procedure was
-left; the brief still goes out, and the ⚠️ line gains
+the four state files, manifests, `README.md`, `CONTRIBUTING.md` and this
+skill's own files. Anything else means the procedure was left; the brief
+still goes out, and the `Drift:` line gains
 `init opened <file> — ignore its content, not part of the brief`.
 
 ## Red flags — stop, you are leaving the procedure
@@ -136,31 +158,35 @@ left; the brief still goes out, and the ⚠️ line gains
 - "I'll just peek at the file for context around the anchor."
 - "HANDOFF mentions this test file, let me look at it."
 - "`head -20` is hardly reading it."
-- "It is a tiny scaffold, reading it costs nothing."
+- "There is no ROADMAP, I'll write a quick one so the brief has something."
+- "I'll create AGENTS.md now, it is only a template."
 - "I need to see the code to propose a good first step."
 
 The brief is built from testimony and git only. Reading code before `go?`
-spends the user's context on a task they have not chosen yet, and the
-first step is chosen from the working tree, not from code comprehension.
+spends the user's context on a task they have not chosen yet, and a file
+created before `go?` lands in a repo the user may not want it in.
 
 ## Quick reference
 
 | Situation | Init does |
 |---|---|
-| Three files present, git agrees | brief, propose HANDOFF's next step |
-| HANDOFF branch ≠ current | ⚠️ with both names, propose from the current branch |
-| Dirty tree HANDOFF ignores | ⚠️ listing the files, propose inspecting them first |
-| No files at all | scaffold (`references/scaffold.md`), ask the 3 scaffold questions, brief |
-| User adds a focus | focus drives ▶️, still ends with `go?` |
+| All files present, git agrees | brief, propose HANDOFF's next step |
+| HANDOFF branch ≠ current | `Drift:` with both names, propose from the current branch |
+| Dirty tree HANDOFF ignores | `Drift:` listing the files, propose inspecting them first |
+| `## Session log` in HANDOFF | `Drift:` names the session that ended without exit and the line count; the log sharpens the first step |
+| No ROADMAP, or current milestone fully ticked | `First step:` is `run aegonex-plan` |
+| No AGENTS.md / CLAUDE.md | `missing:` in `Repo:`, created after go, nothing else created |
+| User adds a focus | focus reshapes `First step:`, still ends with `go?` |
 
 ## Common mistakes
 
 | Mistake | Instead |
 |---|---|
-| Opening source files before the user says go | the three files, the git commands of steps 1 and 4, one grep; `git diff` on a dirty file is enough to describe it |
-| Saying the handoff is stale without the evidence | ⚠️ line with branch names / commit list / file list |
-| Offering two or three options and three questions | one ▶️ step, one `go?` |
-| On a fresh project, asking which UI library or which features to build | those belong to `ROADMAP.md` later; ask only the three scaffold questions |
+| Creating any file before `go?` | list it under `missing:`; create after the answer |
+| Creating ROADMAP.md or HANDOFF.md at all | plan and exit own them; init only names them |
+| Counting the handoff commit as drift | the oldest commit after `HEAD:` that includes HANDOFF.md is the handoff, whatever else it touches |
+| Counting the state files' own text as anchors | the grep excludes the four state files |
+| Saying the handoff is stale without the evidence | `Drift:` line with branch names / commit list / file list |
+| Offering two or three options | one `First step:`, one `go?` |
 | Treating the user's extra words as a go-ahead | they are the focus; the question still ends the brief |
-| Skipping the anchor grep because the handoff already lists work | anchors are the spot-level truth; the handoff may be stale |
 | Forgetting to name `aegonex-exit` | it is the last line of every brief |

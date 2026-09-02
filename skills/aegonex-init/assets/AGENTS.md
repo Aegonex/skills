@@ -9,11 +9,20 @@
 - `<build command>` — build
 - `<lint command>` — lint
 
+## Layout
+Scratch: docs/scratch/
+(disposable working files live there; `aegonex-done` proposes deleting them
+and nothing outside it, or outside a milestone's `docs:` line, is ever
+deleted by a skill)
+
 ## Rules
 - TODO(owner): rules the agent must never break in this repo
 
 ## Session ritual
-- Start every session with the `aegonex-init` skill; end it with `aegonex-exit`.
+- Start every session with `aegonex-init`; plan a milestone with
+  `aegonex-plan`; write decisions, dead ends and environment facts with
+  `aegonex-note` the moment they happen; end the session with
+  `aegonex-exit`; close a finished milestone with `aegonex-done`.
 - Without those skills: read `HANDOFF.md`, then `ROADMAP.md`, check
   `git status`, report drift, and propose one first step before touching code.
 - `HANDOFF.md` is at most one page and is rewritten, never appended.
