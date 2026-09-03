@@ -26,10 +26,21 @@ Design and contracts: `docs/design.md`. How the skills are tested:
 ## Install
 
 ```bash
-# one machine, all detected agents
-for s in init plan note exit done; do npx skills add Aegonex/skills@aegonex-$s -g; done
+npx skills add Aegonex/skills -g --all
+```
 
-# development: link the working copy so edits are live everywhere
+One command, every skill, every agent the CLI detects on this machine
+(Claude Code, Codex CLI, Cursor, OpenCode, GitHub Copilot CLI). Drop `-g`
+to install into the current project instead of the user profile. Pick
+skills with `-s aegonex-init,aegonex-exit`, or list them first with `--list`.
+
+Update later with `npx skills update -g`.
+
+### Development
+
+Link the working copy so edits are live everywhere:
+
+```bash
 for s in init plan note exit done; do
   ln -s "$PWD/skills/aegonex-$s" ~/.agents/skills/aegonex-$s
   ln -s ../../.agents/skills/aegonex-$s ~/.claude/skills/aegonex-$s
