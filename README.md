@@ -28,21 +28,3 @@ Design and contracts: `docs/design.md`. How the skills are tested:
 ```bash
 npx skills add Aegonex/skills
 ```
-
-Add `-g` to install for every project on this machine instead of the
-current one. To install a single skill:
-
-```bash
-npx skills add Aegonex/skills --skill aegonex-init
-```
-
-## Development
-
-Link the working copy so edits are live everywhere:
-
-```bash
-for s in init plan note exit done; do
-  ln -s "$PWD/skills/aegonex-$s" ~/.agents/skills/aegonex-$s
-  ln -s ../../.agents/skills/aegonex-$s ~/.claude/skills/aegonex-$s
-done
-```
