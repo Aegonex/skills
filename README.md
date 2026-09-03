@@ -26,14 +26,15 @@ Design and contracts: `docs/design.md`. How the skills are tested:
 ## Install
 
 ```bash
-npx skills add Aegonex/skills -g -s '*' -y -a claude-code -a codex -a cursor -a opencode -a github-copilot
+npx skills add Aegonex/skills -g -s '*'
 ```
 
-One command, every skill, the five agents this repository targets. Drop
-`-g` to install into the current project instead of the user profile. Trim
-the `-a` list to the agents you use, or replace it with `-a universal -a
-claude-code` for the shortest form. (`--all` also works but reports
-harmless failures for agents that have no global scope.)
+Selects every skill, then shows one prompt listing the agents found on this
+machine. Press Enter to install to all of them. Drop `-g` to install into
+the current project instead of the user profile.
+
+Avoid `-y` and `--all` with `-g`: both add agents that have no global
+directory (Eve, PromptScript) and report a failure for each.
 
 Update later with `npx skills update -g`.
 
