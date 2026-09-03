@@ -7,6 +7,12 @@ Claude Code, Codex CLI, Cursor, OpenCode and GitHub Copilot CLI.
 This repository contains instructions and empty templates only. Project state
 (ROADMAP.md, HANDOFF.md) lives in each project's own repository, never here.
 
+## Install
+
+```bash
+npx skills add Aegonex/skills
+```
+
 ## Skills
 
 Five verbs, one lifecycle: open a session, plan a milestone, note what git
@@ -22,9 +28,3 @@ cannot reconstruct, close the session, close the milestone.
 
 Design and contracts: `docs/design.md`. How the skills are tested:
 `docs/testing.md`.
-
-## Install
-
-```bash
-npx skills add Aegonex/skills
-```
