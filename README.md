@@ -26,19 +26,17 @@ Design and contracts: `docs/design.md`. How the skills are tested:
 ## Install
 
 ```bash
-npx skills add Aegonex/skills -g -s '*'
+npx skills add Aegonex/skills
 ```
 
-Selects every skill, then shows one prompt listing the agents found on this
-machine. Press Enter to install to all of them. Drop `-g` to install into
-the current project instead of the user profile.
+Add `-g` to install for every project on this machine instead of the
+current one. To install a single skill:
 
-Avoid `-y` and `--all` with `-g`: both add agents that have no global
-directory (Eve, PromptScript) and report a failure for each.
+```bash
+npx skills add Aegonex/skills --skill aegonex-init
+```
 
-Update later with `npx skills update -g`.
-
-### Development
+## Development
 
 Link the working copy so edits are live everywhere:
 
