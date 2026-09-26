@@ -42,8 +42,13 @@ context window fills up.
   command (`/compact`, then `aegonex-init`). A Claude-Code-only enhancement
   for later: a `SessionStart` hook with the `compact` matcher that re-runs
   the init brief automatically after every compaction.
-- Briefs use plain-text labels as the first word of each line. No emoji or
-  symbol precedes a label.
+- Briefs are written for a reader who may not know git or the skills'
+  words: a bold title, one markdown table whose rows appear only when they
+  have something to say, a bold action line, and the question last. No
+  emoji or icon. Where the harness has a multiple-choice question tool
+  (Claude Code: `AskUserQuestion`) the question is asked with it; elsewhere
+  the last line carries a bold **go**. Every reply is in the user's language
+  (v0.3 spec below).
 
 ## Portability rules (verified 2026-09)
 - Frontmatter uses only the six spec fields: name, description, license,
@@ -87,6 +92,70 @@ context window fills up.
     Session log of HANDOFF.md when it happens, not at exit.
 11. A closed milestone leaves one lesson behind: done proposes turning a
     dead end into a rule in AGENTS.md, in the same commit.
+
+## v0.3 spec (2026-09-26): readable briefs
+
+Why: users could not read the v0.2 briefs. They were label-per-line
+strings full of the skills' own words (`Drift:`, `Anchors: 0 TODO · 0 NOTE`,
+`tree: clean`, the HEAD sha), lines that said `none`, and a `— go?` buried
+at the end of a long line that some users never saw. The answer to a Thai
+user came back with English labels.
+
+Only the replies change. What each skill reads, writes, checks and asks
+permission for is the v0.2 contract, unchanged.
+
+### Brief shape (init, plan, exit, done)
+
+```
+**<title: what happened, or what is proposed>**
+
+| Item | Detail |
+|---|---|
+| <row label> | <one fact, in words> |
+
+**<action label>:** <the one thing go will do>
+
+Reply **go** to <do it>, or tell me <the alternative>.
+```
+
+- A row appears only when it has something to say. No row reads `none`,
+  `0` or `-`; with no rows the table is left out.
+- Not shown: the HEAD sha, NOTE and dead-end counts, raw git commands, and
+  the skills' vocabulary (drift, anchor, tree).
+- The brief is printed as markdown, never inside a code block, so the table
+  renders. Paths, commands and commit ids go in backticks.
+- Steps run without commentary: the brief is the whole reply.
+
+| Skill | Title | Action line | Question |
+|---|---|---|---|
+| init | `<project> · branch <branch>` | `First step:` | `Start the first step?` — `go` / `Not now` |
+| plan | `Planned: <M> <name>` + `Done when:`, then a steps table `# / Step / Done when` | the steps table | `Start step 1?` — `go` / `Change the plan` |
+| exit | `Handoff saved.` / `Handoff created.` + next entry | `Will commit:` (or `Committed:` when the user already asked) | `Commit now?` — `go` / `Don't commit` |
+| done, pass | `<M> <name> can close.` | `Will commit:` | `Delete and commit now?` — `go` / `Not yet` |
+| done, fail | `<M> <name> cannot close yet.` + a `Check / Result` table | `First step:` | `Start the fix?` — `go` / `Not now` |
+| note | none: one line `Noted (<kind>): <text>` | none | none |
+
+### The question
+
+- With a multiple-choice question tool: the brief is printed, then the
+  question is asked with the tool, options `go` and the alternative. The
+  tool adds a free-text answer by itself. Plan also asks each planning
+  question through the tool, one per call.
+- Without one: the reply ends with a single line containing `**go**`, alone,
+  after a blank line.
+- Any clear yes is go: go, ok, yes, ได้, โอเค, ลุย. Any other answer is a new
+  instruction, never silence.
+
+### Language
+
+Every reply is in the user's language, labels included: the language of
+the user's message; when only the skill's name was typed, the language of
+the conversation; else the language of the state files; else English. Each
+skill carries its labels in English and Thai; other languages translate
+the English. The content written into `ROADMAP.md` and `HANDOFF.md` follows
+the same rule; their headings stay fixed English so the other skills can
+parse them, and note's kind word (`decision`, `dead end`, `fact`) stays
+English in the file because exit sorts by it.
 
 ## v0.2 spec (2026-09-02) — status: implemented and verified on fixtures 2026-09-02
 

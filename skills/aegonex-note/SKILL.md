@@ -4,7 +4,7 @@ description: Use the moment something happens in a session that git cannot recon
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # aegonex-note
@@ -38,6 +38,14 @@ already shows, plans (`aegonex-plan`), or the end of the session
 (`aegonex-exit`). A decision inside the user's instruction to do work
 ("use 60s, then continue") is still a decision: note it, then do the work.
 
+## Language
+
+The reply and the text of the line are in the user's language: the language
+of the message that holds the decision, dead end or fact; else the
+language of the conversation so far. The kind word in the file stays English
+(`decision`, `dead end`, `fact`), because `aegonex-exit` sorts by it; the
+reply translates it (Thai: `ตัดสินใจ`, `ทางตัน`, `ข้อสังเกต`).
+
 ## Procedure
 
 1. Compose one line:
@@ -58,12 +66,14 @@ already shows, plans (`aegonex-plan`), or the end of the session
      and will overwrite it.
    Nothing else in the file changes: not Stopped at, not Next step, not a
    character above the section.
-4. Reply with exactly one line, `noted: <the line written>`, and continue
-   whatever the user asked for. No question, no summary. If the user's
-   message also asked for work, the `noted:` line comes first and the work
+4. Reply with exactly one line, and continue whatever the user asked for:
+   `Noted (<kind>): <text>` / `จดแล้ว (<ประเภท>): <text>`, without the time
+   and the leading `- `. No question, no summary, no table. If the user's
+   message also asked for work, the noted line comes first and the work
    follows in the same reply.
 5. When the section now has twelve or more lines, add one more reply line:
-   `session log is long: run aegonex-exit`.
+   `Session log is long (<n> lines): run aegonex-exit when you stop.` /
+   `บันทึกยาวแล้ว (<n> บรรทัด) ถ้าจะพักให้เรียก aegonex-exit`.
 
 Reads: the tail of `HANDOFF.md`, `git branch --show-current`,
 `git rev-parse --short HEAD`. Writes: one line. Never `ROADMAP.md`, never
@@ -88,7 +98,7 @@ ended without exit.
 
 - A `ROADMAP.md` edit in a message that is not `aegonex-plan`,
   `aegonex-exit` or `aegonex-done`.
-- A reply that starts with anything but `noted:` when a decision was just
+- A reply that does not start with the noted line when a decision was just
   made.
 - Two lines written for one fact.
 - A question mark in the reply.
@@ -97,9 +107,9 @@ ended without exit.
 
 | Situation | Note does |
 |---|---|
-| "ตัดสินใจแล้วว่า X เพราะ Y ทำต่อเลย" | `noted: - HH:MM decision: X, เพราะ Y`, then the work |
-| Approach A failed, switching to B | `noted: - HH:MM dead end: A, <why>` before B starts |
-| A test needed `JWT_SECRET=dev` | `noted: - HH:MM fact: npm test needs JWT_SECRET=dev` |
+| "ตัดสินใจแล้วว่า X เพราะ Y ทำต่อเลย" | writes `- HH:MM decision: X เพราะ Y`, replies `จดแล้ว (ตัดสินใจ): X เพราะ Y`, then the work |
+| Approach A failed, switching to B | writes `- HH:MM dead end: A, <why>`, replies `Noted (dead end): A, <why>` before B starts |
+| A test needed `JWT_SECRET=dev` | writes `- HH:MM fact: npm test needs JWT_SECRET=dev`, replies `Noted (fact): npm test needs JWT_SECRET=dev` |
 | Text contains a token | the token becomes `<redacted>`, the fact stays |
 | No `HANDOFF.md` yet | the shell is created with only the header and the log |
-| Twelfth line | the `run aegonex-exit` hint is added |
+| Twelfth line | the `aegonex-exit` hint is added |

@@ -4,7 +4,7 @@ description: Use when a work session is ending or must be handed off — "ปิ
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # aegonex-exit
@@ -35,7 +35,19 @@ without this skill did both.
 Not for: starting a session (`aegonex-init`), recording one fact mid-task
 (`aegonex-note`), or closing a milestone (`aegonex-done`).
 
+## Language
+
+Every reply is in the user's language: labels, content, the question and its
+options (`go` stays `go`). That is the language of the user's message; when
+they typed only the skill's name, the language of the conversation so far;
+else the language of `HANDOFF.md`; else English. This skill gives labels in
+English and Thai; for another language, translate the English. The content
+of `HANDOFF.md` follows the same language; its headings stay as in the
+template, because `aegonex-init` reads them.
+
 ## Procedure
+
+Run the steps in order and without commentary: the brief is the whole reply.
 
 ### 1. Git facts
 
@@ -47,7 +59,11 @@ git status --short
 git log --oneline -5
 git diff --stat
 git diff <file>        # once per file in git status; git output, not a file read
+date +%F               # today: the HANDOFF date, new decisions, the commit message
 ```
+
+Today's date comes from `date +%F`, never from a commit, a file or an
+example in this skill.
 
 ### 2. Session facts
 
@@ -69,8 +85,8 @@ probe is run now to "verify" it, and no check is claimed that did not run.
 
 ### 3. Reconcile ROADMAP.md
 
-If the file does not exist, skip this step and print
-`ROADMAP: none — aegonex-plan creates it` in the brief.
+If the file does not exist, skip this step; the brief's `Current work` row
+says so.
 
 | Situation | Do |
 |---|---|
@@ -144,52 +160,94 @@ suffix, a "first few characters" of a secret is a secret.
 Run `git status --short` again. Every path it lists appears in Stopped at;
 if one is missing, add it. `wc -l HANDOFF.md` is at most 60. The only files
 changed by this skill are `HANDOFF.md`, `ROADMAP.md` and anchor comment
-lines; anything else in the diff is reported in the `Unrecorded:` line.
+lines; anything else in the diff goes in the brief's `Not recorded` row.
 
 ### 8. The brief
 
-Print exactly this shape, then stop.
+Print it as markdown, not inside a code block, so the table renders:
 
 ```
-Repo: <project> · <branch> · HEAD <sha> · tree: clean | <n> modified: <files>
-ROADMAP: <current milestone> — <done>/<total> · ticked today <n> · decisions +<n> | none — aegonex-plan creates it
-HANDOFF rewritten | created (<date>): stopped at <…> · next: <…> · dead ends: <n>
-Anchors: <n> removed · <n> added · <n> open
-Unrecorded: <paths in git status missing from HANDOFF, or other files this skill touched> | none
-Commit? `git add <files> && git commit -m "<message>"` — go?
+**Handoff saved.** Next session: start with `aegonex-init`
+
+| Item | Detail |
+|---|---|
+| <row label> | <one fact, in words> |
+
+**Will commit:** <files> with message `<message>`
 ```
 
-Rules:
-- Each line starts with its label in plain text. No emoji, icon or bullet
-  precedes a label.
-- The `Commit?` line lists the exact files (`HANDOFF.md`, `ROADMAP.md`,
-  files with anchor edits, and the user's in-flight files only if they
-  said the work is ready) with a message under 72 characters. It is a
-  question. The command is not run.
-- If the user's message itself asked for the commit ("commit ด้วย",
-  "commit it"), that is the authorisation: run the commit after step 7 and
-  the `Commit?` line becomes `Committed <sha>: <files>` with no question.
-- The final line names the next entry, in the user's language, once:
-  `session หน้าเปิดด้วย aegonex-init` / `next session: start with aegonex-init`.
-  When the user mentioned context, compaction or a new session, the line
-  is a command to copy: `พิมพ์ /compact แล้วเรียก aegonex-init` /
-  `type /compact, then run aegonex-init` (or open a new session and run it).
-- No project files exist (never initialised): still create `HANDOFF.md`
-  from the template, skip ROADMAP, and the final line adds that
-  `aegonex-init` will scaffold the rest.
+The title names what happened and the next entry:
+
+```
+**Handoff saved.** Next session: start with `aegonex-init`
+**บันทึก handoff แล้ว** ครั้งหน้าเปิดด้วย `aegonex-init`
+```
+
+On a project's first exit the first words are `Handoff created.` /
+`สร้าง handoff แล้ว`, and when the project had no state files the title adds
+that `aegonex-init` will set up the rest. When the user mentioned context,
+compaction or a new session, the next entry is the command to type:
+`Then type /compact and run aegonex-init` / `จากนั้นพิมพ์ /compact แล้วเรียก
+aegonex-init` (commands in backticks when printed).
+
+Rows, in this order. A row appears only when it has something to say: no
+row reads "none", "0" or "-".
+
+| Row (English / ไทย) | Says | Appears when |
+|---|---|---|
+| Stopped at / หยุดไว้ที่ | the work in flight in a few words; `not re-run` / `ยังไม่ได้รันเทสต์ใหม่` when a test was not re-run after an edit | always |
+| Next step / ครั้งหน้าเริ่มที่ | HANDOFF's Next step | always |
+| Current work / งานปัจจุบัน | `<M> <name>: <done> of <total> steps done`, plus `, <n> ticked today` when n > 0 / `<M> <name>: เสร็จ <done> จาก <total> ขั้น (วันนี้ติ๊กเพิ่ม <n>)`; without a roadmap `no ROADMAP.md yet: aegonex-plan creates it` / `ยังไม่มี ROADMAP.md: aegonex-plan จะสร้างให้` | always |
+| Decided today / ตัดสินใจวันนี้ | each decision in a few words, separated by `;` | decisions were added |
+| Dead ends / ทางตัน | each new dead end in a few words | dead ends were added |
+| TODO in code / TODO ในโค้ด | `removed <n>; added at <file:line>` | anchors changed |
+| Not recorded / ยังไม่ได้บันทึก | paths in `git status` still missing from HANDOFF, or files this skill touched outside its list | step 7 found any |
+
+The header row is `| Item | Detail |` / `| เรื่อง | รายละเอียด |`. Paths,
+commands and commit ids go in backticks. No emoji or icons. Not shown: the
+HEAD sha, anchor counts that did not change, the raw git command.
+
+The action line names the exact files to commit (`HANDOFF.md`,
+`ROADMAP.md`, files with anchor edits, and the user's in-flight files only
+if they said the work is ready) and a message under 72 characters.
+Nothing is committed before the answer:
+
+```
+**Will commit:** `HANDOFF.md`, `ROADMAP.md` with message `docs: handoff <today>`
+**จะ commit:** `HANDOFF.md`, `ROADMAP.md` ด้วยข้อความ `docs: handoff <today>`
+```
+
+The question comes last, once, and nothing follows it:
+- If your harness has a tool that asks the user a multiple-choice question
+  (Claude Code: `AskUserQuestion`), print the brief, then ask with it:
+  `Commit now?` / `commit เลยไหม?`, options `go` (commit these files) and
+  `Don't commit` / `ไม่ต้อง commit` (the files stay on disk).
+- Otherwise the reply ends with this line, alone, after a blank line:
+  `Reply **go** to commit, or say no to leave it uncommitted.` /
+  `พิมพ์ **go** เพื่อ commit หรือบอกว่าไม่ต้อง`
+
+If the user's message itself asked for the commit ("commit ด้วย", "commit
+it"), that is the authorisation: commit after step 7, the action line
+becomes `**Committed:** <sha> <files>` / `**commit แล้ว:** <sha> <files>`,
+and there is no question.
+
+After the answer: any clear yes is go (go, ok, yes, ได้, โอเค, ลุย); run
+`git add <files> && git commit -m "<message>"` and reply in one line with the
+sha, repeating the `/compact` command when it applies. On no, one line: the
+files are saved on disk and not committed.
 
 ## Never commit on your own
 
 The files are on disk the moment they are written; nothing is lost by not
 committing. Whether and what to commit is the user's decision, asked in the
-`Commit?` line. Agents without this skill committed anyway; their reasons:
+closing question. Agents without this skill committed anyway; their reasons:
 
 | Excuse | Reality |
 |---|---|
 | "A WIP commit keeps the day's work safe" | The work is already on disk. A WIP commit puts unfinished code into history the user did not choose. |
 | "Committing only HANDOFF.md and ROADMAP.md is harmless" | It is still a commit the user did not ask for, and it hides the question. |
-| "The user said close the work, that includes saving" | Closing = writing the files. Saving to history = the user's word, in the `Commit?` line. |
-| "The user always says yes anyway" | Then the answer costs one word. |
+| "The user said close the work, that includes saving" | Closing = writing the files. Saving to history = the user's word, in answer to the closing question. |
+| "The user always says yes anyway" | Then the answer costs one word, or one click. |
 
 ## Never probe, never tick on hope
 
@@ -220,11 +278,11 @@ committing. Whether and what to commit is the user's decision, asked in the
 
 | Situation | Exit does |
 |---|---|
-| normal end of session | steps 1–8, `Commit?` asks about the commit |
-| "context is heavy" mid-task | same; next step = continue the current work; final line gives the `/compact` command |
-| user asked for the commit in the same message | steps 1–8, commit after step 7, `Commit?` becomes `Committed <sha>` |
+| normal end of session | steps 1–8, the question asks about the commit |
+| "context is heavy" mid-task | same; next step = continue the current work; the title gives the `/compact` command |
+| user asked for the commit in the same message | steps 1–8, commit after step 7, `Committed <sha>`, no question |
 | `## Session log` present | its lines become Decisions, Dead ends, Notes; the rewrite drops the section |
-| never initialised (no state files) | HANDOFF.md created from template, no ROADMAP, final line points to `aegonex-init` |
+| never initialised (no state files) | HANDOFF.md created from template, no ROADMAP, the title points to `aegonex-init` |
 | step already marked `(in progress)` | the suffix stays, once |
 | nothing changed this session | HANDOFF.md still rewritten with today's date and the same next step |
 
@@ -238,4 +296,7 @@ committing. Whether and what to commit is the user's decision, asked in the
 | Appending today's notes under the old handoff | overwrite; the old one lives in git history |
 | Pasting the diff or the commit message into HANDOFF | the path and the commit id |
 | Leaving a completed `AIDEV-TODO` in the code | delete the comment line |
-| Ending with a summary instead of the brief | the six lines, then the `Commit?` question, then the final line |
+| Ending with a summary instead of the brief | title, table, action line, question |
+| A row that says none, 0 or nothing new | leave the row out |
+| Showing the raw `git add … && git commit …` command | the files and the message; the command runs after go |
+| Text after the question | the question is last |

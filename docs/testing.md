@@ -27,16 +27,22 @@ Copy a fixture per run; agents mutate them.
    already exists, RED runs the previous version (`git archive HEAD` into a
    scratch dir).
 2. GREEN: same runs, with "the user invoked <skill>; read SKILL.md and
-   follow it". `tests/judge.sh <kind> <brief-file> <fixture>` checks the
-   brief's shape (no emoji, labels, one `go?`, the closer on the last line)
-   and prints disk facts; the scenario's own assertions run on those facts.
+   follow it". The prompt asks for the exact reply in `brief.md` and every
+   command, read and write in `trace.md` (a harness may refuse a subagent
+   write to a file named `report.md`).
+   `tests/judge.sh <kind> <brief-file> <fixture> [th|en]` checks the brief's
+   shape (a bold title first, one table outside any code block, no row that
+   says none, 0 or -, no emoji, no HEAD sha, the action line, `**go**` once
+   and on the last line, at most 25 lines; with `th|en`, the language: at
+   least half the lines in Thai, or none) and prints disk facts; the
+   scenario's own assertions run on those facts.
 3. REFACTOR: every deviation becomes a red flag, a rationalization row or a
    required slot in the template, then the affected scenarios run again.
 
 Two scenario shapes need a trick:
 - `aegonex-plan` asks questions one at a time, and a subagent cannot wait for
   a user. The prompt scripts the user's answers in order and tells the agent
-  to write each question it would ask into its report before taking the next
+  to write each question it would ask into its trace before taking the next
   answer. The judge counts the questions.
 - `aegonex-note` must trigger from its description alone. The prompt lists
   all five skills with their descriptions and paths, describes a situation
@@ -68,3 +74,20 @@ their own (3/3) and wrote fragments of a planted secret into HANDOFF.md
 - Without a done skill, the agent ran the milestone's checks (good), then
   invoked exit on its own, rewrote HANDOFF.md and lost its dead ends, never
   collapsed the milestone, and refused to structure the deletions.
+
+## Results that shaped v0.3 (2026-09-26)
+
+Eight scenarios (init stale, fresh and session log; plan; exit; done passing
+and failing; note), one run each, v0.2 against v0.3.
+
+- v0.2 briefs failed 51 of 83 shape checks (no bold title, no table, the
+  HEAD sha, no bold **go** on the last line) and 4 of 8 language checks
+  (English labels for a Thai user). Its exit wrote HANDOFF.md in English
+  for a Thai user.
+- v0.3 passed 83/83 shape and 8/8 language checks, and 52 of 54 behaviour
+  checks. Both misses were exit copying the example date in its SKILL.md
+  into HANDOFF.md and the commit message. Exit, done and plan now take today
+  from `date +%F` and their examples say `<today>`; the rerun passed 25/25
+  (exit) and 19/19 (done failing).
+- done, on a failing check, put a behaviour in backticks as if it were a
+  command; its row template now says which is which.

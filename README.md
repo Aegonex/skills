@@ -26,5 +26,10 @@ cannot reconstruct, close the session, close the milestone.
 | `aegonex-exit` | a session ends or is handed off | `HANDOFF.md` whole, `ROADMAP.md` ticks and decisions, proposes the commit |
 | `aegonex-done` | a milestone is finished | runs its checks, collapses it in `ROADMAP.md`, puts its documents in the proposed commit command for deletion |
 
+Every reply is a short table in the user's language that ends with one
+question (`aegonex-note` answers in one line and asks nothing). In Claude
+Code the answer is a **go** button; elsewhere, type `go` (or ok, yes, ได้,
+ลุย). Nothing is committed or deleted before it.
+
 Design and contracts: `docs/design.md`. How the skills are tested:
 `docs/testing.md`.

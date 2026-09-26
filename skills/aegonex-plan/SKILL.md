@@ -4,7 +4,7 @@ description: Use when a project needs its next milestone planned — there is no
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # aegonex-plan
@@ -36,21 +36,35 @@ Not for: opening a session (`aegonex-init`), recording a single decision
 (`aegonex-note`), closing a milestone (`aegonex-done`), or designing the
 inside of one step (the agent's own design tools, after the step starts).
 
+## Language
+
+Every question and reply is in the user's language: labels, content, the
+options (`go` stays `go`). That is the language of the user's message; when
+they typed only the skill's name, the language of the conversation so far;
+else the language of `ROADMAP.md`; else English. This skill gives labels in
+English and Thai; for another language, translate the English. The content
+of `ROADMAP.md` follows the same language; its headings do not (step 4).
+
 ## Procedure
 
 ### 1. Read the testimony
 
 Read `ROADMAP.md` if it exists, `AGENTS.md`, `HANDOFF.md` if it exists, and
-`git log --oneline -20`. Manifests (`package.json` and the like) may be
-read for the stack. No source file is opened: the roadmap is built from
-what the user wants, not from what the code does.
+`git log --oneline -20`; `date +%F` gives today's date for new Decisions
+lines. Manifests (`package.json` and the like) may be read for the stack.
+No source file is opened: the roadmap is built from what the user wants,
+not from what the code does.
 
-### 2. Ask, one question per message
+### 2. Ask, one question at a time
 
-Ask in the user's language. Prefer multiple choice. One question per
-message, never a list. At most seven questions per milestone, counting
-every question of any kind. Ask in this order, and skip any question whose
-answer is already known from the files or from the user's first message:
+One question at a time, never a list. If your harness has a tool that asks
+the user a multiple-choice question (Claude Code: `AskUserQuestion`), ask
+each question with it: one question per call, two to four short options with
+the likely answer first; the tool adds a free-text answer by itself.
+Otherwise ask in a message of its own, with lettered options when they fit.
+At most seven questions per milestone, counting every question of any kind.
+Ask in this order, and skip any question whose answer is already known from
+the files or from the user's first message:
 
 1. Who is it for and what problem does it solve?
 2. What does "done" look like, as something a person can see or a command
@@ -95,19 +109,49 @@ The file stays under two pages. Paths and commands, not prose about how.
 
 ### 5. The brief
 
-Print exactly this shape, then stop.
+Written for someone who approves the plan from this reply alone. Print it as
+markdown, not inside a code block, so the tables render:
 
 ```
-Repo: <project> · <branch> · HEAD <sha>
-ROADMAP written (<date>): <milestone> — <n> steps, each with done when · not doing: <n> · questions asked: <n>
-Decisions: +<n> · Constraints: +<n>
-First step: <step 1 of the milestone, with its done when> — go?
+**Planned: <M> <name>** (written to `ROADMAP.md`)
+Done when: <the milestone's done when, in words>
+
+| # | Step | Done when |
+|---|---|---|
+| 1 | <step> | <its check> |
+
+| Item | Detail |
+|---|---|
+| <row label> | <what it says> |
 ```
 
-Each line starts with its label in plain text; no emoji or symbol precedes
-a label. The closing line, after the question, names the closer in the
-user's language, once: `จบงานเรียก aegonex-exit` when the user writes
-Thai, `end with aegonex-exit` otherwise.
+The steps table lists every step of the milestone. The second table holds
+only the rows that have something to say, in this order, and is left out
+when none do:
+
+| Row (English / ไทย) | Says | Appears when |
+|---|---|---|
+| Not doing / ไม่ทำรอบนี้ | each item with its reason, separated by `;` | `Not doing` has lines |
+| My call / ผมเลือกให้ | each `(agent's call)` decision with its why | the user let the agent decide |
+| Constraints / ข้อจำกัด | the constraints added this time | any were added |
+| Later / ถัดไป | later milestones, by name | the roadmap has any |
+
+Thai for the fixed parts: `**วางแผนแล้ว: <M> <name>** (เขียนลง ROADMAP.md)`,
+`เสร็จเมื่อ:`, `| # | ขั้น | ผ่านเมื่อ |`, `| เรื่อง | รายละเอียด |`. Paths and
+commands go in backticks. No emoji or icons. Not shown: the HEAD sha, the
+number of questions asked, counts of decisions or constraints.
+
+The question comes last, once, and nothing follows it:
+- With a multiple-choice question tool: print the brief, then ask
+  `Start step 1?` / `เริ่มขั้นที่ 1 เลยไหม?`, options `go` (step 1 in a few
+  words) and `Change the plan` / `แก้แผน`.
+- Otherwise the reply ends with this line, alone, after a blank line:
+  `Reply **go** to start step 1, or tell me what to change.` /
+  `พิมพ์ **go** เพื่อเริ่มขั้นที่ 1 หรือบอกว่าอยากแก้แผนตรงไหน`
+
+Any clear yes is go (go, ok, yes, ได้, โอเค, ลุย): start step 1. A change
+request edits `ROADMAP.md` and prints the brief again; it is not one of the
+seven questions.
 
 ## Never
 
@@ -116,12 +160,13 @@ Thai, `end with aegonex-exit` otherwise.
 - Never commit. Whether the roadmap is committed is the user's word, at
   `aegonex-exit`.
 - Never write or edit `HANDOFF.md`; exit owns it.
-- Never ask two questions in one message, and never ask an eighth.
+- Never ask two questions in one message or one tool call, and never ask an
+  eighth.
 
 | Excuse | Reality |
 |---|---|
 | "One more question, to be thorough" | The write condition is the stop. Thoroughness lives in `done when`, not in the interview. |
-| "Is this design OK before I write it?" | That is a question, it counts, and the brief's `go?` is the only approval. |
+| "Is this design OK before I write it?" | That is a question, it counts, and the brief's closing question is the only approval. |
 | "I'll write a spec so the steps are concrete" | A step is concrete when its `done when` is a command or a behaviour. A spec is a second file nobody owns. |
 | "I'll sketch the code so the estimate is right" | No code before the step starts. Sizing is "fits one session", nothing finer. |
 | "I'll commit the roadmap so it is safe" | It is on disk. Committing is the user's decision. |
@@ -144,3 +189,5 @@ Thai, `end with aegonex-exit` otherwise.
 | Existing ROADMAP, M2 ticked, M3 empty | write M3's steps; M1, M2 and Decisions untouched |
 | User names a feature mid-milestone | add it as a new milestone, not into the current one |
 | Write condition met after three answers | stop asking, write, brief |
+| Harness has a question tool | every question and the final go through it |
+| User typed only the skill's name | the conversation's language, else the roadmap's, else English |

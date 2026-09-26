@@ -4,7 +4,7 @@ description: Use when the user says a milestone or the whole plan is finished an
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # aegonex-done
@@ -35,10 +35,20 @@ Not for: ending a session (`aegonex-exit`), planning the next milestone
 (`aegonex-plan`), or ticking a single step (`aegonex-exit` does that from
 evidence).
 
+## Language
+
+Every reply is in the user's language: labels, content, the question and its
+options (`go` stays `go`). That is the language of the user's message; when
+they typed only the skill's name, the language of the conversation so far;
+else the language of `ROADMAP.md`; else English. This skill gives labels in
+English and Thai; for another language, translate the English. Command
+output is quoted as it is.
+
 ## Procedure
 
-The steps run in order. The first failing step ends the skill at step 5
-with a `not done` brief.
+The steps run in order and without commentary: the brief is the whole
+reply. The first failing step ends the skill at step 5 with the brief for a
+milestone that cannot close.
 
 ### 1. Git facts and the milestone
 
@@ -48,6 +58,7 @@ git branch --show-current
 git rev-parse --short HEAD
 git status --short
 git log --oneline -5
+date +%F                  # today, for `closed <date>`
 ```
 
 Read `ROADMAP.md`. The milestone being closed is the one the user named,
@@ -71,8 +82,8 @@ grep -rn --exclude-dir={node_modules,.git,dist,build,vendor,target} --exclude={A
 
 Any `AIDEV-TODO` that names this milestone is a failing check.
 
-If anything failed: the brief's `Checks:` line names it, `First step:` is
-to fix it, and steps 3 and 4 do not happen. The user insisting does not
+If anything failed: the brief lists it, its first step is the fix, and
+steps 3 and 4 do not happen. The user insisting does not
 change the outcome; the failing command's output is the answer.
 
 ### 3. Retire
@@ -90,8 +101,8 @@ will write `M<n> closed, next: aegonex-plan`.
 
 From the milestone's dead ends (`HANDOFF.md`, the session), pick the one
 that would have saved the most time had it been a rule. Write it as one
-line under Rules in `AGENTS.md` and show it in the `Retro:` line; `none`
-when no dead end generalises. This is the only write any skill makes to
+line under Rules in `AGENTS.md`; the brief shows it in the `New rule` row.
+When no dead end generalises there is no rule and no row. This is the only write any skill makes to
 `AGENTS.md` after scaffolding; it goes into the same commit, and the user
 strikes it with the go if they disagree.
 
@@ -99,32 +110,78 @@ strikes it with the go if they disagree.
 
 Candidates for deletion are exactly: the paths on the closed milestone's
 `docs:` line, and files under the `Scratch:` directory. Nothing else is
-ever a candidate; without both, `Cleanup:` reads `none declared`. On
-project close (no milestone left), `HANDOFF.md` is also a candidate: there
-is no session to hand off to. Tracked files go in `git rm`, untracked ones
-in `rm` (git cannot restore those, so they are always listed by name).
+ever a candidate. On project close (no milestone left), `HANDOFF.md` is also
+a candidate: there is no session to hand off to. Tracked files are deleted
+with `git rm`, untracked ones with `rm` (git cannot restore those, so the
+brief lists them by name, apart from the others).
 
-Print exactly this shape, then stop.
+Print the brief as markdown, not inside a code block, so the table renders.
+When every check passed:
 
 ```
-Repo: <project> · <branch> · HEAD <sha>
-Checks: <passed>/<total> done when passed · <failed checks> | milestone not done: <what is missing>
-ROADMAP: <milestone> closed (<date>) · <n> steps collapsed · decisions kept <n>, dropped <n>
-Anchors: <n> TODO for this milestone (must be 0) · <n> NOTE kept
-Cleanup: <paths, tracked | untracked> | none declared
-Retro: <rule added to AGENTS.md> | none
-Commit? `git rm <tracked> && rm <untracked> && git add ROADMAP.md AGENTS.md && git commit -m "chore: close <milestone>"` — go?
+**<M> <name> can close.** All <n> checks passed
+
+| Item | Detail |
+|---|---|
+| <row label> | <one fact, in words> |
+
+**Will commit:** the deletions above, `ROADMAP.md` and `AGENTS.md`, with message `chore: close <M>`
 ```
 
-When a check failed, the brief is three lines: `Repo:`, `Checks:` with
-what is missing, and `First step: <fix> — go?`.
+Thai title: `**ปิด <M> <name> ได้** เช็กผ่านครบ <n>/<n>`; header
+`| เรื่อง | รายละเอียด |`; action line `**จะ commit:** การลบข้างบน พร้อม
+ROADMAP.md และ AGENTS.md ด้วยข้อความ chore: close <M>` (paths and the message
+in backticks). Rows, in this order, only when they have something to say:
 
-Each line starts with its label in plain text; no emoji or symbol precedes
-a label. The command is not run. The closing line names the next verb in
-the user's language, once: `next: aegonex-plan` while milestones remain,
-`project closed; end with aegonex-exit` when none do, then on its own
-line the harness command `/clear` (the finished milestone's context is
-dead weight; init rebuilds the picture from the files).
+| Row (English / ไทย) | Says | Appears when |
+|---|---|---|
+| ROADMAP / ROADMAP | `<M> collapsed to one line` / `ยุบ <M> เหลือบรรทัดเดียว`, plus the decisions and Not doing lines dropped, if any | always |
+| New rule in AGENTS.md / กฎใหม่ใน AGENTS.md | the retro rule | step 4 wrote one |
+| Delete, restorable from git / ลบ (กู้คืนจาก git ได้) | the tracked candidates | there are any |
+| Delete, not in git, cannot be restored / ลบ (ไม่อยู่ใน git กู้คืนไม่ได้) | the untracked candidates | there are any |
+| Next / ต่อไป | `aegonex-plan for <next M>; type /clear first` / `aegonex-plan วางแผน <next M> แนะนำพิมพ์ /clear ก่อน`; on project close `project closed; end with aegonex-exit` / `ปิดโปรเจกต์แล้ว จบด้วย aegonex-exit` | always |
+
+With no candidates the delete rows are left out and the action line commits
+`ROADMAP.md` and `AGENTS.md` only.
+
+When a check failed:
+
+```
+**<M> <name> cannot close yet.** <passed> of <total> checks passed
+
+| Check | Result |
+|---|---|
+| <the command in backticks, or the behaviour in words> | <failed: the reason from its output, in a few words> |
+
+**First step:** <the fix>
+```
+
+Thai: `**ยังปิด <M> ไม่ได้** เช็กผ่าน <passed>/<total>`, header
+`| เช็ก | ผล |`, `ผ่าน` / `ไม่ผ่าน: <reason>`, `**ขั้นแรก:**`. One row per
+check, failing ones first; an open `AIDEV-TODO` of this milestone is a
+failing row `TODO <file:line>`. Nothing else is written, and nothing is
+deleted.
+
+Paths, commands and commit ids go in backticks. No emoji or icons. Not
+shown: the HEAD sha, counts of collapsed steps or NOTEs, the raw git command.
+
+The question comes last, once, and nothing follows it:
+- If your harness has a tool that asks the user a multiple-choice question
+  (Claude Code: `AskUserQuestion`), print the brief, then ask with it. All
+  passed: `Delete and commit now?` / `ลบและ commit เลยไหม?` (`Commit now?` /
+  `commit เลยไหม?` when nothing is deleted), options `go` and `Not yet` /
+  `ยังไม่ปิด`. A check failed: `Start the fix?` / `เริ่มแก้เลยไหม?`, options
+  `go` and `Not now` / `ไม่ใช่ตอนนี้`.
+- Otherwise the reply ends with one line, alone, after a blank line. All
+  passed: `Reply **go** to delete and commit, or tell me which files to
+  keep.` / `พิมพ์ **go** เพื่อลบและ commit หรือบอกว่าอยากเก็บไฟล์ไหนไว้`. A
+  check failed: `Reply **go** to start the fix, or tell me what to do
+  instead.` / `พิมพ์ **go** เพื่อเริ่มแก้ หรือบอกว่าอยากทำอะไรแทน`.
+
+Nothing is deleted or committed before the answer. Any clear yes is go (go,
+ok, yes, ได้, โอเค, ลุย). After a pass, go runs
+`git rm <tracked> && rm <untracked> && git add ROADMAP.md AGENTS.md && git commit -m "chore: close <M>"`
+and the reply is one line: the sha, then the `Next` row again.
 
 ## Never close on a word
 
@@ -139,10 +196,10 @@ dead weight; init rebuilds the picture from the files).
 
 ## Red flags — stop, you are leaving the procedure
 
-- `rm`, `git rm` or `git commit` run before the user answered `go?`.
+- `rm`, `git rm` or `git commit` run before the user answered go.
 - A `[x]` written before the check ran.
 - `HANDOFF.md` opened for writing.
-- A path in `Cleanup:` that is on neither the `docs:` line nor under
+- A path in a delete row that is on neither the `docs:` line nor under
   `Scratch:`.
 - "Let me just tick it, the tests passed yesterday."
 
@@ -150,9 +207,10 @@ dead weight; init rebuilds the picture from the files).
 
 | Situation | Done does |
 |---|---|
-| All checks pass, docs listed, scratch files present | collapse, retro, one command with every deletion, `go?` |
-| One check fails | three-line brief, no collapse, no deletion, `First step:` is the fix |
+| All checks pass, docs listed, scratch files present | collapse, retro, both delete rows, one question |
+| One check fails | the checks table, no collapse, no deletion, the first step is the fix |
 | User insists after a failed check | same brief; the command output is the answer |
-| No `docs:` line, no `Scratch:` | `Cleanup: none declared` |
-| Last milestone | `HANDOFF.md` joins the candidates; closer is `aegonex-exit` |
-| Milestone has an open `AIDEV-TODO` | not done; `First step:` is that TODO |
+| No `docs:` line, no `Scratch:` | no delete rows; the commit is `ROADMAP.md` and `AGENTS.md` |
+| Last milestone | `HANDOFF.md` joins the candidates; the `Next` row names `aegonex-exit` |
+| Milestone has an open `AIDEV-TODO` | cannot close; the first step is that TODO |
+| A row with nothing to say | left out |
