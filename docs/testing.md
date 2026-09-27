@@ -467,6 +467,7 @@ Left for later (outside v0.5.1):
 - Leader mode 2 and 5 commit `<f>` work, a note's HANDOFF.md included
   (M3);
 - "Reply per part" does not say the report repeats the reviewer's line;
+- a leader ticking the ROADMAP step itself (M1, rounds 2 and 3);
 - a task's `done when:` note line has no owner (note, lines 40-41);
 - a new AGENTS.md in a repo under a parent: `scaffold.md` does not name
   the Repos section (M1);
@@ -475,6 +476,8 @@ Left for later (outside v0.5.1):
 - init's "no HEAD sha" against the New commits row;
 - the Thai example brief, which lacks the move rows;
 - in a parent session:
+  - the go reply's clause order: setup clauses not led by `<r>: `, and
+    once setup committed after the step (M1);
   - note lines in English under a Thai reply, note's grep skipped, and
     no Noted line;
   - the note written after the parts merged, though section 7 puts it
