@@ -47,7 +47,8 @@ Base: <base branch> · Remote: <remote name, or none>
 - **Go:** landing, pushing, a pull request or removing a unit folder or branch needs a go to a reply naming it; silence, a
   timeout, autopilot or a go to another reply is no. A land go runs Clean up, then ≤3 plain lines, no question or table:
   `<sha> · landed on <Base> · .worktrees/<u> removed` + `Next: <next step>`. A task due to Land ends its report with the
-  land question `Land? push to <Base>, remove .worktrees/<u>, aegonex/<u>: Not yet / go` (Thai `ยังไม่ land`).
+  land question `Land? push to <Base>, remove .worktrees/<u>, aegonex/<u>: Not yet / go` (Thai `ยังไม่ land`),
+  or, while `<f>`'s status lists HANDOFF.md, `run aegonex-exit first: HANDOFF.md has notes not saved`.
 - **Land** when all the unit's work is done (a task: last part integrated): `git -C "<f>" push <remote> aegonex/<u>:<Base>`
   (no remote: `git -C "<main>" merge --ff-only aegonex/<u>`). Refused as protected: `git -C "<f>" push <remote> aegonex/<u>`
   (refused: stop, quote it); a pull request: `gh pr create` if the remote is a host URL (never guess a repo); keep `<f>`.

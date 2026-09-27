@@ -105,6 +105,34 @@ context window fills up.
 11. A closed milestone leaves one lesson behind: done proposes turning a
     dead end into a rule in AGENTS.md, in the same commit.
 
+## v0.4.1 (2026-09-27): a task's notes are saved before it lands
+
+The defect, found in a scratch lab while designing v0.5: with no open
+milestone folder, `aegonex-note` writes into the task folder's own
+`HANDOFF.md` (its `t-<slug> done when:` line at the least) and commits
+nothing. The land question's go then pushes, and Clean up's
+`worktree remove` refuses the folder, because it holds uncommitted
+changes. Nothing is lost, but the go stops half done: landed on Base, the
+folder and branch left behind, and the next `aegonex-done` goes the long
+way (exit, then every check, a `chore: close` commit and a second push).
+
+The fix, the rule `aegonex-done` step 1 already has for routes 3 and 4:
+- `AGENTS.md`, **Go**: a task due to Land ends its report with the land
+  question, or, while `<f>`'s status lists `HANDOFF.md`,
+  `run aegonex-exit first: HANDOFF.md has notes not saved` (one more
+  line: the two sections are 43 lines; compressing the bullet in place
+  would have cut other rules, the reason v0.4's fix rounds give).
+- `aegonex-exit`, after its commit: a task whose last part is integrated
+  gets the land question as the reply's last line, so saving the notes
+  and landing cost two goes, not three turns.
+- The five skills are `0.4.1`; the section headings stay
+  `(aegonex 0.4)`, since `aegonex-init` decides that setup is due from
+  them.
+
+Projects set up with v0.4 keep their copy of the sections: setup only
+appends sections that are missing. There the old behaviour stays; saying
+`aegonex-exit` before the land go avoids it.
+
 ## v0.4 spec (2026-09-26): one folder per piece of work
 
 Why: until v0.3 the agent worked on whatever branch the main checkout was
@@ -177,7 +205,8 @@ syncs, scans and lands).
    removal question lists the safe answer first. A task due to Land (its
    last part integrated) ends its report with the land question
    `Land? push to <Base>, remove .worktrees/<u>, aegonex/<u>: Not yet /
-   go` (Thai `ยังไม่ land`). After landing, the reply is at most
+   go` (Thai `ยังไม่ land`); v0.4.1: while its folder's status lists
+   `HANDOFF.md`, `run aegonex-exit first` in its place. After landing, the reply is at most
    3 plain lines, no outer code span, no table and no question (only the
    sha, branch names, paths, skill names and commands in backticks):
    `<sha> · landed on <Base> · .worktrees/<u> removed`, then
@@ -196,7 +225,7 @@ syncs, scans and lands).
 5. Nothing moves `<main>`'s branch unless `<main>` is on `<Base>`.
 6. No new milestone while a milestone waits for its pull request.
 
-### AGENTS.md: two sections, 42 lines together
+### AGENTS.md: two sections, 42 lines together (43 from v0.4.1)
 
 `assets/AGENTS.md` ends with `## Working mode (aegonex 0.4)` (Unit,
 Commands, Open, State files, Go, Land, Clean up, Never) and
@@ -478,7 +507,7 @@ in place.
 | note | 115 | 136 | clock read, names-kept secret rule checked with `git grep`, the not-closed milestone folder, `Not saved` when no folder is open; fix round 2: 120 characters by eye, the why shortened first; fix round 3: a why only when given, the kind's repeated words cut first |
 | exit | 302 | 348 | state folder, `-C` git facts (C26), carry and correct (C20), never ticks a milestone line (A1), `docs:` only for working documents (A3), `AIDEV-TODO(<unit>)` (C19), step 9 cites done's Sync, scan and push reading; HANDOFF in the reply's language, the waiting-milestone Current work row; fix round 2: every written line in the reply's language, a task's decisions and the waiting line as Notes, the plain-text unfinished-landing reply; fix round 3: the template read by its path, never `ls` or `find`, a why only when given, each Stopped at line's commit state, a command done-when ticked only on a run here |
 | done | 216 | 373 | unit resolution, closed/online, stop checks, Sync with the local-Base guard, task checks, tests once (C22), install first (D7), scan, Land, Clean up with Update, HANDOFF never deleted (A2); every check runs, `not run: <runner> missing`; the pull-request path in `references/pull-request.md` (56 lines, limit 70); fix round 2: distinct checks, facts read from files, a table of failures only, a reviewed first step on go, Clean up at once when merged; fix round 3: step 1 first on a go too, the retro rule in `<f>/AGENTS.md` and nothing written in `<main>`, every check again after the reviewed fix under a `Fixed:` or `FAIL:` line, the two-line after-go reply with `Next:`; fix round 4: every check anew after the fix's commit |
-| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters |
+| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters (v0.4.1: exit 349, total 1,400, sections 43 lines) |
 
 Duplication: 23 single lines appear in two or more skills, all of them
 frontmatter keys, section headings, table header and template rows, the

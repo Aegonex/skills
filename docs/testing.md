@@ -259,3 +259,20 @@ up). V3 fails as in every round: with two parts and no subagent tool it
 runs each part's test and `status --short` before the commit, but reads
 no `diff HEAD` and puts no PASS line in its report, taking the passing
 tests as the review. Its unit, parts, tests, land and Clean up are right.
+
+## Results that shaped v0.4.1 (2026-09-27)
+
+The defect came from the lab, not from an agent. Scenario 21 in
+`tests/lifecycle.sh` notes a fact in a task folder's `HANDOFF.md`, lands,
+and watches Clean up's `worktree remove` refuse the folder; with exit's
+commit first, the land and Clean up go through. The lab passed 134/134.
+
+A new agent scenario, V12, forces the case: a task folder with no
+milestone open, a Thai request to fix a typo and note a decision, then
+"call aegonex-exit", go, go. One run each of V9 and V11 (regression) and
+V12, Sonnet: 3 of 3 passed, every deterministic check green (V9 17, V11
+15, V12 23). V12 ended turn 1 with the exit-first line and no land
+question, exit's go reply ended with the land question, and the land go
+removed the folder. Minor notes left for later: `ls` and `cat` with
+relative paths, a trace naming a remote branch that does not exist, and
+an exit brief whose Current work row lacked the no-ROADMAP suffix.

@@ -4,7 +4,7 @@ description: Use when a work session starts on a project — the first message o
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # aegonex-init

@@ -4,7 +4,7 @@ description: Use when a work session is ending or must be handed off — "ปิ
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # aegonex-exit
@@ -247,7 +247,8 @@ authorisation: commit after step 7, the action line becomes `**Committed:** <sha
 After the answer: any clear yes is go (go, ok, yes, ได้, โอเค, ลุย); run these two, each its own call,
 `<f>` being the absolute path of the folder that holds the files: `git -C "<f>" add -- <files>` and
 `git -C "<f>" commit -m "<message>" -- <files>`. Reply in one line with the sha, repeating the
-`/compact` command when it applies. On no, one line: the files are saved on disk and not committed.
+`/compact` command when it applies; a task whose last part is integrated then gets, on its own last
+line, the land question of the Go rule in `<main>/AGENTS.md`. On no, one line: saved on disk, not committed.
 
 ### 9. Land unfinished work
 

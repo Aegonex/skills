@@ -363,6 +363,19 @@ ok "Remove: Clean up from step 2 with -D" 'clean_ "$UH" t-half -D && [ ! -d "$UH
 ok "online copy still there (aegonex never deletes it)" 'git -C "$M" ls-remote --exit-code origin refs/heads/aegonex/t-half'
 rm -f "$O/hooks/pre-receive"
 
+say "21 v0.4.1: no milestone open, the task's noted HANDOFF.md blocks Clean up; aegonex-exit's commit first"
+mkrepo nomile; setup_; open_ t-a; UA=$M/.worktrees/t-a
+printf '# HANDOFF — 2026-09-27\n\n## Session log\n- 2026-09-27 10:00 fact: t-a done when: sh test.sh\n' > "$UA/HANDOFF.md"   # note, no milestone folder
+printf 'a\n' > "$UA/a2.js"; commit_ "$UA" "feat: a" a2.js
+ok "the status lists HANDOFF.md: the report ends with run aegonex-exit first" 'status_ "$UA" | grep -q "HANDOFF.md"'
+ok "v0.4 defect: the land go pushes, then worktree remove refuses the noted folder" '[ "$(land_ "$UA" t-a)" = landed ] && ! clean_ "$UA" t-a && [ -d "$UA" ] && [ -f "$UA/HANDOFF.md" ]'
+open_ t-b; UB=$M/.worktrees/t-b
+printf '# HANDOFF — 2026-09-27\n\n## Session log\n- 2026-09-27 11:00 fact: t-b done when: sh test.sh\n' > "$UB/HANDOFF.md"
+printf 'b\n' > "$UB/b.js"; commit_ "$UB" "feat: b" b.js
+commit_ "$UB" "docs: handoff 2026-09-27" HANDOFF.md                                          # aegonex-exit's go
+ok "after exit's commit the status is empty" '[ -z "$(status_ "$UB")" ]'
+ok "then the land go lands and cleans up; the notes are on Base" '[ "$(land_ "$UB" t-b)" = landed ] && clean_ "$UB" t-b && [ ! -d "$UB" ] && git -C "$M" cat-file -e origin/main:HANDOFF.md'
+
 . "$HERE/review-round.sh"
 
 echo; echo "passed $P_, failed $F_"; [ "$F_" -eq 0 ]

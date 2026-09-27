@@ -4,7 +4,7 @@ description: Use when a project needs its next milestone planned — there is no
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # aegonex-plan
