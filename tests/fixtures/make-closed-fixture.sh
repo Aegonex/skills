@@ -67,6 +67,8 @@ Goal: a small auth-protected API for the internal dashboard.
 - Node 22. No new runtime dependency without a decision line.
 EOT
 printf '# M2 spec\nRefresh when exp < 60s. Single-use refresh, 7d.\n' > docs/m2-spec.md
+# the project test command runs offline too (done runs it once): the two checks instead of vitest
+sed -i '' 's|"test": "vitest run"|"test": "bash tests/check-refresh.sh \&\& bash tests/check-expiry.sh"|' package.json
 git add -A; GIT_AUTHOR_DATE="2026-09-02T14:00:00+07:00" GIT_COMMITTER_DATE="2026-09-02T14:00:00+07:00" git commit -qm "feat: refresh path, expiry tests, M2 docs"
 pre=$(git rev-parse --short HEAD)
 cat > HANDOFF.md <<EOT

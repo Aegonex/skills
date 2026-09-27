@@ -10,7 +10,15 @@ context window fills up.
   rates of change: `AGENTS.md` (rules, stack, commands: rarely changes),
   `ROADMAP.md` (direction and milestones: changes per milestone),
   `HANDOFF.md` (exact resume point: rewritten every session).
-  `CLAUDE.md` is a one-line pointer to `AGENTS.md`.
+  `CLAUDE.md` is `@AGENTS.md` plus one sentence (Claude Code reads
+  `AGENTS.md` only through that import).
+- Every change, a one-line fix included, happens in a unit folder: a git
+  worktree `<main>/.worktrees/<u>` on branch `aegonex/<u>`, while the main
+  checkout stays on the base branch. `ROADMAP.md` and `HANDOFF.md` are
+  written in the open milestone folder. Big work is split into parts that
+  subagents write in their own folders, each checked by a separate
+  reviewer. Landing, pushing and removing a folder need a go that names
+  them (v0.4 spec below).
 - Spot-level state stays in the code as anchor comments (`AIDEV-TODO`,
   `AIDEV-NOTE`), found with grep. The grep never counts the four state
   files themselves.
@@ -18,23 +26,27 @@ context window fills up.
   `aegonex-note`, `aegonex-exit`, `aegonex-done`). No skill depends on arguments: only Claude Code
   substitutes them, every other agent passes trailing text as plain prompt.
 - Each state file has exactly one writer. `aegonex-init` creates
-  `AGENTS.md` and `CLAUDE.md` when they are missing, and only after the user
-  says go. `aegonex-plan` owns the structure of `ROADMAP.md`.
+  `AGENTS.md` and `CLAUDE.md` when they are missing, or appends the two
+  v0.4 sections to them, and commits that setup, only after the user says
+  go. `aegonex-plan` owns the structure of `ROADMAP.md`.
   `aegonex-exit` owns `HANDOFF.md`, including its first creation, and may
   only tick steps, add decisions and list new documents in `ROADMAP.md`.
   `aegonex-note` may only append one line under `## Session log` in
   `HANDOFF.md`, the moment a decision, dead end or environment fact
   appears, so a session that never reaches exit still leaves testimony.
   `aegonex-done` retires: it collapses a closed milestone in `ROADMAP.md`
-  and proposes deleting the documents that milestone listed. Three writers
+  and proposes deleting the documents that milestone listed, then lands
+  the unit and removes its folder and branch on the same go. Three writers
   of `ROADMAP.md`, three disjoint operations: grow, mark, retire.
 - `aegonex-init` is the single entry point of every session. It reads and
-  briefs; it never modifies a file that exists. Nothing is written before
-  the user answers the brief's question.
+  briefs, and writes nothing before the user answers the brief's question.
+  On go it touches an existing file only to append the setup sections, and
+  it moves uncommitted work into a unit folder and opens that folder.
 - `aegonex-exit` is the single exit of every session. It writes from
-  evidence the session produced, never commits on its own (it proposes the
-  commit), never writes any part of a secret, and ends by naming
-  `aegonex-init` as the next entry.
+  evidence the session produced, commits only on go (it proposes the
+  commit), pushes unfinished work only when the user asks for it, never
+  writes any part of a secret, and ends by naming `aegonex-init` as the
+  next entry.
 - This repository holds instructions and empty templates only. No project's
   filled `ROADMAP.md`/`HANDOFF.md` ever lives here.
 - Compaction cannot be triggered by a skill; it is a harness action the user
@@ -92,6 +104,465 @@ context window fills up.
     Session log of HANDOFF.md when it happens, not at exit.
 11. A closed milestone leaves one lesson behind: done proposes turning a
     dead end into a rule in AGENTS.md, in the same commit.
+
+## v0.4 spec (2026-09-26): one folder per piece of work
+
+Why: until v0.3 the agent worked on whatever branch the main checkout was
+on. It edited next to the user's own work, left branches behind and could
+not split big work. The owner's requirements, binding:
+- R1. All work, a plan included, happens in a git worktree on its own
+  branch, never in the main checkout. It merges into Base only when all of
+  it is done, and merge and push run only on a go that names them.
+- R2. The agent leads: small work is one part; big work is split into parts
+  written by parallel subagents in their own worktrees. A separate reviewer
+  checks every part, even a one-part typo fix. Without subagents the review
+  is marked `review not independent`. Every agent reads this in AGENTS.md.
+- R3. After landing, the folder and branch are removed on the same go.
+  Landed while unfinished: ask Remove / Keep, no answer is Keep. Never
+  force-remove uncommitted or unpushed work. Protected Base: push the
+  branch, open a pull request, keep the folder until it is merged.
+
+Scope (owner): the small version. One machine; no online-only units, no
+notes file, no landing proofs. A rare case that would need machinery is a
+plain stop row with one command.
+
+Unchanged from v0.3: the reply format, the language rule (the reply and
+every line a skill writes follow the user's message, whatever language an
+old file is in; a message with no language of its own, the skill's name or
+a bare `go`, `ok`, `yes`, takes the conversation's so far), who writes
+which file, and "nothing is written before go", with v0.3's two
+exceptions: note appends its line at once, and exit
+writes HANDOFF.md, ROADMAP.md ticks and anchor lines in the state folder
+before its question, so the go only commits (and, for "push what I have",
+syncs, scans and lands).
+
+### Names
+
+| Thing | Name | Folder | Branch |
+|---|---|---|---|
+| main checkout | `<main>`: first `worktree ` path of `git worktree list --porcelain` | stays on Base | Base |
+| milestone M<n> | `m<n>` (no slug) | `<main>/.worktrees/m<n>` | `aegonex/m<n>` |
+| work outside the roadmap, a typo included | `t-<slug>`, 1-3 English words in `a-z0-9-`; `t-<slug>-2` when an old pull request holds the name; work moved from a branch `<b>` takes `<b>` after its last `/` (`fix/db-race` → `t-db-race`) | `<main>/.worktrees/t-<slug>` | `aegonex/t-<slug>` |
+| part k of a unit | `<u>--p<k>` | `<root>/.worktrees/<u>--p<k>`; `<root>` is the harness folder when the unit lives in one, else `<main>` | `aegonex/<u>--p<k>` |
+| harness-made worktree, detached or on a branch outside `aegonex/*` | the unit it holds | adopted as is | `switch -c aegonex/<u> <Base>`; the harness's branch stays |
+
+- `<main>/.worktrees/.gitignore` holds `*` (it hides itself too). The
+  project's `.gitignore` is untouched; an existing `.dockerignore` gets the
+  line `.worktrees` on the setup go. Both are checked with `ls -a
+  "<main>"`, then, if it lists `.worktrees`, `ls -a "<main>/.worktrees"`,
+  one call each.
+- `Base:` and `Remote:` are one line in AGENTS.md's Working mode section.
+- **closed** `<u>`: `git -C "<f>" log -1 --first-parent --no-merges
+  --format=%s` prints `chore: close <u>` (it survives a Sync merge).
+- **online** `<u>`: `refs/remotes/<remote>/aegonex/<u>` has the same hash
+  as `aegonex/<u>` (a stale copy from an old pull request is not online).
+- **state folder**: the open `m<n>` folder that is not closed; else the
+  task folder you work in; else `<main>`, read only. A closed `m<n>`
+  waiting for its pull request is never written again.
+- Status is always read as `git -C "<f>" -c core.quotePath=false status
+  --short`, so a Thai path goes back to git as printed.
+
+### Rules
+
+1. ROADMAP.md and HANDOFF.md are edited only in the open, not closed
+   milestone folder. A task never edits ROADMAP.md and edits HANDOFF.md
+   only when no such folder is open.
+2. Only the setup commit is made in `<main>`; everything else commits on
+   `aegonex/*`. Opening, editing, checks, commits, Sync merges and part
+   integration need no go beyond the request; landing, pushing, a pull
+   request and removing a unit folder or branch need a go to a reply that
+   names them: the push to Base, the folder `.worktrees/<u>` and the branch
+   `aegonex/<u>`, all removed on that same go. Silence, a timeout, an
+   autopilot answer or a go to another reply is no, and every landing or
+   removal question lists the safe answer first. A task due to Land (its
+   last part integrated) ends its report with the land question
+   `Land? push to <Base>, remove .worktrees/<u>, aegonex/<u>: Not yet /
+   go` (Thai `ยังไม่ land`). After landing, the reply is at most
+   3 plain lines, no outer code span, no table and no question (only the
+   sha, branch names, paths, skill names and commands in backticks):
+   `<sha> · landed on <Base> · .worktrees/<u> removed`, then
+   `Next: <next step>`.
+3. Every command, read-only ones (`pwd`, `ls`, `git status`) too, is one
+   line and one tool call, no `&&`, `||` or `;`, so PowerShell 5.1, cmd and
+   dash all run them (dates: `Get-Date -Format yyyy-MM-dd`; greps: `git
+   grep`; no `wc`). An exit code is read from the tool result (no error
+   shown = 0), never with `; echo $?` or `|| true`. Git is always
+   `git -C "<absolute folder>" ...`, even when the shell (or a harness
+   prefix) already stands in that folder, after a go too; no `cd` to run a
+   read. The install runs as `cd "<f>"` on its own call, then the install
+   command on its own call (lifecycle 3).
+4. Never `--force`, `--no-verify`, `reset --hard`, `stash`, `add -A`; never
+   delete an online branch; `branch -D` only after the pushed check.
+5. Nothing moves `<main>`'s branch unless `<main>` is on `<Base>`.
+6. No new milestone while a milestone waits for its pull request.
+
+### AGENTS.md: two sections, 42 lines together
+
+`assets/AGENTS.md` ends with `## Working mode (aegonex 0.4)` (Unit,
+Commands, Open, State files, Go, Land, Clean up, Never) and
+`## Leader mode (aegonex 0.4)` (Size, Part folders, Dispatch, Review,
+Integrate); the verbatim text is in that template. `CLAUDE.md` is
+`@AGENTS.md` plus one sentence; Codex, Cursor, OpenCode and Copilot read
+AGENTS.md natively. The sections carry commands, so an agent without the
+skills opens the right folder, reviews every part and stops at the same
+boundary. Skills cite them by bold name instead of repeating them. They
+are exactly 42 lines, each at most 125 characters: any later edit is made
+in place.
+
+### The lifecycle, with the commands (each proved in the lab walk)
+
+1. **Setup** (init's go, `references/scaffold.md`): Remote = the one name
+   `git remote` prints, else `origin`, else one question (several), else
+   none. Base = `symbolic-ref --short refs/remotes/<remote>/HEAD` minus the
+   prefix, else `main` when `refs/heads/main` exists, else `master`
+   likewise, else ask; the current branch is never the fallback. A value
+   that must be asked is the brief's one question (a `?` row, the question
+   in place of the go line; the answer counts as the go). The brief's
+   `Setup` row names Base, Remote and every file the go writes. Write or
+   append the sections, `@AGENTS.md`, `.worktrees/.gitignore`; `add --
+   <files>`, `commit -m "chore: aegonex setup" -- <files>` (unborn: plus
+   the top-level entries, never `.env*` or dependency folders). No install
+   line in AGENTS.md: derive it from the manifest (`package.json` → `npm
+   install`, `pnpm-lock.yaml`, `yarn.lock`, `pyproject.toml`,
+   `requirements.txt`, `go.mod`, `Cargo.toml`), else `none`.
+2. **Init's go order**: move (save the changes to a patch, `restore`,
+   `switch <Base>`, `<b>` kept), then **Update** when `<Base>..<remote>/<Base>`
+   lists a commit, then setup, then Open the unit (moved work:
+   `t-<slug>`). The move recipe's step 7 opens it: `worktree prune`; a new
+   unit `worktree add -b aegonex/<u> "<main>/.worktrees/<u>" <b>` (no
+   `<b>`: `<Base>`; `aegonex/<u>` already there, `<b>` itself or a
+   leftover: `worktree add "<main>/.worktrees/<u>" aegonex/<u>`, reused);
+   a new unit not made from `<Base>` then runs `merge --no-edit <Base>`, so
+   it carries the setup commit and the v0.4 sections (a conflict: `merge
+   --abort`, named in the reply, go on); a unit whose folder exists runs
+   `merge --no-edit <b>` (with a `<b>`). After that merge, step 8 runs
+   `apply --3way` with the patch and `restore --staged -- <files>`
+   (because `--3way` stages what it applies); step 9, only when step 7
+   added the folder, is the install as in Open (`cd "<unit folder>"`, then
+   the install command, each its own call, once); step 10 is `rm
+   "<main>/.worktrees/move.patch"` (PowerShell `Remove-Item -LiteralPath`).
+   Init's go runs the recipe's steps 1 to 5, then update and setup, then
+   steps 7 to 10. Updating before setup keeps the setup commit on top of
+   the current Base. From a harness folder, setup and move stop with
+   `start a session in <main> and run aegonex-init`. The go's reply is at
+   most 2 lines, no table or question: `**Opened:** .worktrees/<u>` /
+   `**เปิดแล้ว:** .worktrees/<u>`, then one line of what the go did, one
+   clause per action joined by ` · ` (`moved <files> (<b> kept)`, `updated
+   the main folder`, `set up: <files>`, a failed or stopped action with its
+   first error line quoted, and after a move `reopen your editor there`);
+   then the step runs under Leader mode and its report follows. An inspect
+   step reports, from `git -C "<f>" diff HEAD -- <files>` alone (an
+   untracked file: its content), what changed and any `AIDEV-NOTE` in it,
+   context lines included, never a guess at intent. Git stays `git -C`
+   after the go; init's red flags name `The shell already stands in the
+   folder, plain git is fine`.
+3. **Open**: `worktree prune`, `worktree add "<main>/.worktrees/<u>"
+   aegonex/<u>` if the branch exists, else `worktree add -b aegonex/<u>
+   ... <Base>`; then `cd "<f>"` on its own call and the install command on
+   its own call (an install line of `none` is skipped). A failed install
+   is quoted by its first error line as printed and the work goes on: no
+   retry, no diagnosis, no command outside the project (never `sudo`). A
+   new name whose `<remote>/aegonex/<u>` exists: a task takes `-2`; a
+   milestone stops, `by hand: delete aegonex/m<n> on the host, then git -C
+   "<main>" fetch --prune <remote>`.
+4. **Plan**: step 2 asks only what the write condition (step 3) still
+   needs, in the list's order; the list is never a checklist to complete.
+   Before the first question and after each answer the milestone is
+   composed from what is known and the write condition checked first;
+   asking stops once it holds. Question 1 (`What should it let its users
+   do?`) is asked only when the first message does not say who uses it
+   and what it does; questions 4-6 (constraints, risk, order) come only
+   when a step or its `done when` cannot be written without them. A
+   detail a step needs that the user did not give (order, data source,
+   stack, or a structure the user did not show, such as a route path or a
+   menu) is the agent's call, written under Decisions with `(agent's
+   call)`, never asked, and no step assumes one without that line. An
+   answer of none (no deadline, no constraint) adds no Constraints line or
+   row; the `Not doing` row gives a reason only when the user gave one. On
+   go: Open `m<n>`, write ROADMAP.md, `commit -m "docs: plan M<n>" --
+   ROADMAP.md`, then a reply of at most 3 lines of plain text (no outer
+   code span) naming step 1 and its done-when, and stop: step 1 starts on
+   the user's next message. A change that fits one step is a task: asked
+   to plan it (or naming plan), plan writes nothing and it starts on the
+   user's next message; asked to make it, the agent leads it at once
+   under Leader mode, without plan. The brief's question is `Commit this
+   plan?` (v0.3: `Start step 1?`). It stops while `m<n>` is closed: waiting
+   (online) or `run aegonex-done` (not landed).
+5. **Lead**: a request is one ROADMAP step or one task; after its last
+   part is integrated the agent reports and stops (a task's report ends
+   with the land question, rule 2). Size is judged by files, never by the
+   subagent tools at hand: work that changes 2+ modules is 2-5 parts on
+   different files, else one part in `<f>`; every part, a small one too,
+   has a done-when (a command or fact showing it works). With subagents:
+   commit the leader's files by name,
+   `worktree add -b aegonex/<u>--p<k> "<root>/.worktrees/<u>--p<k>"
+   aegonex/<u>` per part, writers commit there. Without them the parts run
+   one at a time in `<f>`: edit, **Review**, commit on PASS before the next.
+   **Review**: a fresh read-only subagent, not the writer (none: the agent
+   itself), runs the done-when and reads `git -C "<p>" diff
+   aegonex/<u>...HEAD` (`<p>` the part folder); for work in `<f>`, before
+   the commit, `git -C "<f>" status --short`, `git -C "<f>" diff HEAD` and
+   every new file. The reply has one line per part, `PASS: <done-when>,
+   diff: <files>` or `FAIL: <why>` (unsure: FAIL), so a skipped
+   read shows; a line the agent reviewed itself ends `(review not
+   independent)`, as is. Only a PASS is integrated
+   (work in `<f>` committed by name; a part: `merge --no-ff`, `worktree
+   remove`, `branch -d`; no go). A redo first merges `aegonex/<u>` into
+   the part. The state files a skill writes are not parts and need no
+   review. Uncommitted work is never removed, the agent's own included;
+   work outside the request is named in the reply, not undone.
+6. **Note**: one line appended to the state folder's HANDOFF.md (under its
+   section heading, added when missing), at most 120 characters judged by
+   eye (no tool counts them), never committed; checked afterwards with
+   `git grep -i -E --untracked`. A decision's why is written only when the
+   user or the session gave one, never invented. To fit, the words that
+   repeat the kind go first (`didn't work`, `failed`, `ไม่เวิร์ค`), then
+   the why is shortened; a word naming what was tried or decided is never
+   cut, and the user's own words for it are kept.
+7. **Exit**: rewrite HANDOFF.md in the state folder (its Branch and HEAD)
+   from `assets/HANDOFF.md`, read by its path beside SKILL.md (never `ls`
+   or `find`, on the project or the skill folder), tick steps (never the
+   milestone line), all before the question; commit on go. A step whose
+   `done when` names a command or test is ticked only when that command
+   ran here and passed (a commit alone is not enough); a file or decision
+   it names: the commit that made it. Every line exit writes, HANDOFF.md
+   and the new ROADMAP.md lines (Decisions, new steps), is in the reply's
+   language, whatever language the file already uses; a number or name
+   replaced inside an old line leaves the rest of it as it was. A
+   decision's `(<why>)` is written only when the user or the session gave
+   a reason, never a placeholder or an invented one. Stopped at has one
+   line per file the status lists but HANDOFF.md and ROADMAP.md (init's
+   Unrecorded work check leaves them out too): what changed, an untracked
+   file only by what the session said about it; a file outside the action
+   line adds `not committed, not part of the handoff commit` /
+   `ยังไม่ commit (ไม่รวมใน commit handoff)`; with push what I have, one in
+   it adds `committed unfinished, landed on <Base>`, written as done, never
+   as staged or with will / จะ. Next step is one action, never two joined
+   by `then`. A task as the state folder never touches ROADMAP.md: today's
+   decisions become dated Notes `YYYY-MM-DD — <decision>[ (<why>)]`. While
+   a closed `m<n>` waits for its pull request, the Current work row names
+   the task and `M<n> closed, waits for its pull request`, the waiting
+   folder's Dead ends and Notes are carried, and the last Note is
+   `M<n> closed, waits for its pull request (aegonex/m<n>)`.
+8. **Done**: step 1 runs whole and first on every call, a go or a
+   merged-PR message included; nothing is carried over from an earlier
+   turn. It stops on part branches `aegonex/<u>--p*`, on uncommitted files
+   (a row naming them, `First step: commit <files>`, the question `Commit
+   them now?`), or on `<main>` not on `<Base>`. Step 3 runs each distinct
+   `done when` check once (a command several lines name counts once), the
+   tests (once, `CI=true` plus the environment HANDOFF's Notes name;
+   skipped as a repeat only when a check above is the same command line,
+   else run and counted even when its script repeats checks) and the
+   anchor grep even after one fails, and lists every failure. A `done
+   when` that is a fact in a file (`recorded below`, `documented in
+   <file>`) is read there, else `not in <file>`; a failure with no output
+   takes its reason from the condition the check's own script tests, else
+   `exit <code>, no output`. The cannot-close table lists only failing,
+   then not-run, then TODO rows; a passed check is only in the count. A
+   missing runner is `not run: <runner> missing`, never passed, and its
+   first step is by hand when AGENTS.md has no install line. A go on a
+   cannot-close brief runs its first step as one reviewed Leader-mode part
+   in `<f>` (the failed check rerun, `status --short`, `diff HEAD`, every
+   new file; committed on PASS; an install command is just run), then
+   every check anew from step 3 after the first step and its commit, if
+   any (the review's check too, never its earlier result), and a
+   new brief with one line under its title, no sha, in place of
+   **Review**'s `PASS:` or `FAIL:` line: after a committed fix
+   `Fixed: <files> committed (review not independent)` /
+   `แก้แล้ว: commit <files> (review not independent)`, after a FAIL
+   `FAIL: <evidence> (review not independent)`, the parenthesis only
+   without subagents and never translated; that go closes, lands and
+   removes nothing. **Retire**: a decision goes only when nothing in the
+   landed code still follows it; one the shipped behaviour embodies (a
+   lifetime, a limit, a format, a library) stays; unsure: keep. A `Not
+   doing` entry goes only when it names only this milestone. **Retro**:
+   the dead end that would have saved the most time becomes one line
+   under Rules in `<f>/AGENTS.md`, never `<main>`'s, in the close commit.
+   **Sync**: `fetch <remote> <Base>`, merge `<remote>/<Base>`, then local
+   `<Base>` only when `log <remote>/<Base>..<Base>` prints nothing or only
+   `chore: aegonex setup`; the user's own unpushed commits stop the brief
+   and are named. A HANDOFF.md conflict keeps this unit's copy plus the
+   Dead ends, Notes and Session log lines of `show MERGE_HEAD:HANDOFF.md`
+   it lacks. `merge --abort` only when `MERGE_HEAD` exists. Secret scan
+   over `<remote>/<Base>..aegonex/<u>` (no `<remote>/<Base>`:
+   `aegonex/<u>`); a scan that exits non-zero stops.
+   The go: `git rm` the tracked candidates, `rm -- "<f>/<file>"` each
+   untracked one on its own line (PowerShell `Remove-Item -LiteralPath`;
+   never `-r` or `-f`), `<f>/ROADMAP.md` and `<f>/AGENTS.md` written and
+   nothing in `<main>` (a file written, checked out or restored there is a
+   red flag), `commit --allow-empty -m "chore: close <u>"`, Land, then
+   **Clean up**: `cd "<main>"`, `merge-base --is-ancestor aegonex/<u>
+   <remote>/<Base>`, **Update**, `worktree remove`, `branch -d`. The reply
+   is exactly the two plain lines of rule 2, the second the brief's `Next`
+   row: ``Next: `aegonex-plan` for M3; type `/clear` first``.
+9. **Update** (done Clean up 2, init): `<main>` on `<Base>`; `merge
+   --ff-only <remote>/<Base>`; refused: `reset --keep <remote>/<Base>` only
+   when `log <remote>/<Base>..<Base>` prints one or more lines, all `chore:
+   aegonex setup`, and `git grep -q -F "## Working mode (aegonex 0.4)"
+   <remote>/<Base> -- AGENTS.md` exits 0; else stop and name the commits.
+10. **Protected Base** (done's `references/pull-request.md`, read at step
+    7.3 and step 8): the whole push output holds `[remote rejected]`
+    and `protected`, `GH006`, `GH013`, `pull request` or `review` → `push
+    <remote> aegonex/<u>` (no `-u`; refused: stop, quoted). Only when
+    `remote get-url <remote>` prints `https://<host>/<owner>/<repo>` or
+    `git@<host>:<owner>/<repo>` (with or without `.git`): `gh pr create`
+    when gh works, else the printed link, else
+    `https://<host>/<owner>/<repo>/compare/<Base>...aegonex/<u>`. Any other
+    URL (a path, `file://`): no gh and no link; the reply says `open a pull
+    request for aegonex/<u> into <Base> on your host`. `<owner>/<repo>` is
+    never guessed. The after-go reply is done's two lines, the first
+    naming the ignored files after the folder: `a1b2c3d · pull request
+    <link> · .worktrees/m2 kept until it merges (with .env)` /
+    `(พร้อม .env)`, then the `Next:` line. When the user says it is merged
+    (step 1 has run again): `rev-parse aegonex/<u>` equals `rev-parse
+    --verify -q <remote>/aegonex/<u>` (missing: `fetch <remote> <Base>`;
+    merged by ancestry → Clean up, else stop, `the online copy is gone`,
+    the by-hand removal named), `fetch <remote> <Base>`. A closed unit then
+    runs Clean up from Update with `branch -D` at once, no second question
+    (its close go named the removal), and replies with the same two
+    lines, the first `a1b2c3d · merged into main · .worktrees/m2 removed`;
+    a unit landed unfinished by exit asks Remove / Keep, Keep first. The
+    waiting brief (`Merged? Remove now?`, `Not yet` first) is printed only
+    while the unit waits and the user has not said it is merged; it names
+    the ignored files that go with the folder. A unit that is neither
+    closed nor online gets one line, `no pull request was opened for it`,
+    then the normal routes.
+11. **Closed, not online**: already in `<remote>/<Base>` by ancestry →
+    Clean up only; else Sync and `Will land`, with a row `if its pull
+    request was merged, say merged instead`.
+12. **Unfinished landing** (exit, "push what I have"): the question names
+    commit, Sync, scan and the push to Base (no question tool: the last
+    line is `Reply **go** to commit and push, or say no to leave it
+    unpushed.`); on go, commit, Sync as done step 2, scan, Land (push
+    output read as done; `[rejected]`: `Base moved: run aegonex-exit
+    again`), then a reply of at most 4 lines of plain text, no title or
+    table, only the sha, paths and branch names in backticks: `<sha>
+    handoff committed · aegonex/<u> landed on <Base> (unfinished)`, `<sha>`
+    the tip that landed (`rev-parse --short HEAD` after the push: the Sync
+    merge when Sync made one, not the handoff commit), and Remove / Keep
+    (Keep first, no answer is Keep), the ignored files after the folder:
+    `(with .env)` / `(พร้อม .env)`. Remove is Clean up. On the pull-request
+    path the reply gives the link or the `on your host` line, and nothing
+    is asked until done step 8.
+13. **Harness folder**: lands from itself; cleanup runs `switch --detach`
+    and `branch -d` there, never removes the folder; the next init runs
+    Update in `<main>`.
+
+### Stop rows instead of machinery
+
+| Case | The reply |
+|---|---|
+| a key in an unpushed commit, or a scan that failed | `a key is in <file> (commit <sha>)`; by hand: `reset --soft <remote>/<Base>`, take it out, commit |
+| the host's push protection finds a key | `the host found a key in these commits` |
+| Base moved between Sync and push (`[rejected]`) | the close stays; `run aegonex-done again` (exit's unfinished landing: `run aegonex-exit again`) |
+| the branch push is refused | quote its `!` line and stop |
+| the remote is not a host URL (a path, `file://`) | no `gh`, no compare link: `open a pull request for aegonex/<u> into <Base> on your host` |
+| unit branch differs from its pull request copy | by hand: `git -C "<f>" push <remote> aegonex/<u>` |
+| the online copy is gone (host deleted it, a prune fetch dropped it) | if merged, by hand: `worktree remove "<f>"`, then `branch -D aegonex/<u>` |
+| `<main>` is on another branch | by hand: `git -C "<main>" switch <Base>` |
+| `<main>` has commits that are not online | name them; Sync asks to land without them; Update stops |
+| a milestone name held by an old online branch | by hand: delete it on the host, then `fetch --prune` |
+| part branches `aegonex/<u>--p*` left | `<u> has parts not integrated: <branches>` |
+| folder has modified or untracked files | `worktree remove` refuses; name them; never `--force` |
+| remove fails part-way (Windows lock) | `worktree prune`, ask the user to delete the folder |
+| a unit branch held by another folder | not adopted; the reply names the folder |
+| a Sync conflict that cannot be resolved | `merge --abort` (when it started); the first step names the files |
+| runner or dependencies missing | `not run: <runner> missing`; the install command is the first step, on go; no install line in AGENTS.md: by hand, install it and write the line |
+
+### Skill changes (line counts after the agent-run fixes, `wc -l`)
+
+| Skill | v0.3 | v0.4 | What changes |
+|---|---|---|---|
+| init | 251 | 318 | worktree facts, state folder, Work folder / Other work (waiting, leftovers) / Will move rows, main-folder checks, first-step order with the closed milestone rule, go order move → update → setup → open/adopt, reused task names, git grep anchors; after the agent runs: Base never the current branch, the Setup row, moved work into `t-<slug>`; fix round 2: the move's step 7 merges Base into the new unit, the two-line go reply; fix round 3: the install as the move's own step 9 (`cd`, then the command), the inspect report from the diff alone, the plain-`git` red flag; `references/scaffold.md` 90 lines, limit 90 |
+| plan | 193 | 224 | reads the open milestone folder; stops (no sections, closed waiting or not landed, all ticked); composes before go, opens `m<n>` and commits only ROADMAP.md on go, then a three-line reply and stop; fix round 2: the write condition after every answer, missing details the agent's call; fix round 3: ask only what the write condition still needs, question 1 only when the first message lacks it, an unshown structure the agent's call, the plain-text on-go reply; fix round 4: a one-step change the user asked to make is led at once, not deferred |
+| note | 115 | 136 | clock read, names-kept secret rule checked with `git grep`, the not-closed milestone folder, `Not saved` when no folder is open; fix round 2: 120 characters by eye, the why shortened first; fix round 3: a why only when given, the kind's repeated words cut first |
+| exit | 302 | 348 | state folder, `-C` git facts (C26), carry and correct (C20), never ticks a milestone line (A1), `docs:` only for working documents (A3), `AIDEV-TODO(<unit>)` (C19), step 9 cites done's Sync, scan and push reading; HANDOFF in the reply's language, the waiting-milestone Current work row; fix round 2: every written line in the reply's language, a task's decisions and the waiting line as Notes, the plain-text unfinished-landing reply; fix round 3: the template read by its path, never `ls` or `find`, a why only when given, each Stopped at line's commit state, a command done-when ticked only on a run here |
+| done | 216 | 373 | unit resolution, closed/online, stop checks, Sync with the local-Base guard, task checks, tests once (C22), install first (D7), scan, Land, Clean up with Update, HANDOFF never deleted (A2); every check runs, `not run: <runner> missing`; the pull-request path in `references/pull-request.md` (56 lines, limit 70); fix round 2: distinct checks, facts read from files, a table of failures only, a reviewed first step on go, Clean up at once when merged; fix round 3: step 1 first on a go too, the retro rule in `<f>/AGENTS.md` and nothing written in `<main>`, every check again after the reviewed fix under a `Fixed:` or `FAIL:` line, the two-line after-go reply with `Next:`; fix round 4: every check anew after the fix's commit |
+| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters |
+
+Duplication: 23 single lines appear in two or more skills, all of them
+frontmatter keys, section headings, table header and template rows, the
+two question lead-in lines (`The question comes last, ...`, `- Otherwise
+the reply ends ...`) and the anchor `git grep` line; the longest shared
+run is the 5-line frontmatter tail, so no shared block exceeds 10 lines.
+Exit cites done for the secret pattern instead of repeating it. No new
+file type: only `.worktrees/.gitignore` is new in a user's project.
+
+### Known issues covered
+
+- A1: exit never ticks a milestone line; only done's collapse closes one.
+- A2: HANDOFF.md is never a deletion candidate; init skips a stale
+  `aegonex-done` next step for a closed milestone.
+- A3: exit lists on `docs:` only files called working, draft or temporary.
+- B4: note's grep only finds candidates; names and placeholders stay,
+  values and key-shaped strings become `<redacted>`, checked after writing.
+- B5: note reads the clock once (`date '+%F %H:%M'` / `Get-Date`).
+- C6: every anchor search is one `git -C "<f>" grep -n --untracked -E
+  "AIDEV-(TODO|NOTE)" -- . ":(exclude,glob)**/AGENTS.md" ...` line.
+- D7: done's description drops bare done / finished / เสร็จแล้ว; plan drops
+  "what next"; done never installs; init names what it edits on the go.
+- Kept round-2 fixes: C19, C20, C22, C26.
+
+### Dropped from round 2
+
+The notes file in the git dir; online-only units, backup push and machine
+switching; landed proofs (merge-tree, first-parent) and git 2.38; Closed
+elsewhere; Set aside and `aegonex-kept/*`; Leftover and Unfinished-rebase
+machinery (a `UU` status is a plain first step; leftovers are one row);
+the `## Open tasks` section; Catch up's three cases (one guarded Update);
+headless reviewer commands and `references/harnesses.md`; the lead report
+format; `GIT_TERMINAL_PROMPT`; the jest row; the identity lint.
+
+### Testing
+
+- `tests/lifecycle.sh` (bash, bare repos as remotes, a pre-receive hook as
+  the protected Base, a `gh` stub): 130 checks. 1-20 walk setup, plan, a
+  two-part lead, a task beside the milestone, exit, done, the protected
+  path with squash and merge commits, `fetch.prune`, Keep and Remove,
+  reopen, never-force, the HANDOFF conflict, moves, harness adoption, the
+  setup-only reset, unborn, the scan, no remote, Base moving.
+  `tests/review-round.sh` (21-36) replays each review finding with the
+  fixed recipe: setup carried after a move, the reset guard, `<main>` on
+  the user's branch, a reused task name and a refused branch push, a
+  harness made before setup, an empty remote, exit's commit-then-Sync, a
+  Thai path, `.env` while waiting, an unpushed Base commit, a pruned
+  online copy, update before setup, the closed state folder, the adoption
+  guard, a landed unit whose cleanup stopped, GH013, a leftover part.
+  Green on git 2.54.
+- `tests/judge.sh` keeps every v0.3 check and gains `init-go`, `after-go`,
+  `keep-ask` and `done-wait` (`tests/samples/` holds one passing reply per
+  kind), `Will land` / `Will remove` for done, and disk facts per
+  worktree, the `aegonex/*` branches and the online refs.
+- `tests/fixtures/make-v04-fixture.sh <fixture> <unit> [--protected]`.
+- Agent scenarios, two turns each (brief, then `go`; V7 a third), Claude
+  Code plus one Codex smoke run; no `--force`, `reset --hard`, `stash`,
+  `--no-verify`, and an empty diff before go: V1 init on stale-app (move
+  of `fix/db-race` into `t-db-race`, merged with Base so it carries the
+  setup; the go reply, `init-go`: `**Opened:** .worktrees/t-db-race`, one
+  ` · ` line ending `reopen your editor there`, then the step's report),
+  V2 plan on fresh-app, V3 a two-module request, V4 note from a task
+  folder while `m2` is open, V5 exit on session-end-app, V6 done
+  unprotected, V7 done `--protected` (turn 2, `after-go`: `<sha> · pull
+  request <link> · .worktrees/m2 kept until it merges`, the ignored files
+  after the folder, then the `Next:` line; the fixture's path remote gets
+  `open a pull request for aegonex/m2 into main on your host`, no gh, no
+  guessed link), then turn 3 "the PR is merged" (Clean up at once with
+  `-D`, no second question: `<sha> · merged into main · .worktrees/m2
+  removed`, then the `Next:` line), V8
+  exit "push what I have" (keep-ask, `.env` named), V9 a typo task with one
+  reviewed part, V10 done with `AIDEV-TODO(M2)` and a failing test, V11
+  exit in a task folder while `m2` waits (HANDOFF lands in the task).
+
+### Portability
+
+Single `git -C "<absolute folder>"` lines, never a `cd` for git; other
+commands run in the unit folder (the shell's working directory, or a
+`cd "<f>"` line of their own, which the install always has); Clean up
+first moves the shell to `<main>` so Windows can delete the folder. A
+file is deleted with `rm` on one quoted path per line (PowerShell
+`Remove-Item -LiteralPath`), never `-r` or `-f`. `gh` is optional and
+runs only for a host URL remote; git 2.23+ suffices (`switch`,
+`restore`).
 
 ## v0.3 spec (2026-09-26): readable briefs
 
@@ -270,10 +741,10 @@ Goal: <one sentence>
 - [ ] M2 — <name> · done when: <observable>
 
 ## Not doing
-- <explicitly out of scope, with the reason>
+- <explicitly out of scope>[ — <reason, when given>]
 
 ## Decisions
-- <YYYY-MM-DD> — <decision> (<why>)
+- <YYYY-MM-DD> — <decision>[ (<why>, when given)]
 
 ## Constraints
 - <deadline, platform, budget, non-negotiables>

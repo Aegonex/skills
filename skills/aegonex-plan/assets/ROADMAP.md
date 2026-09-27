@@ -9,10 +9,10 @@ Goal: <one sentence>
 - [ ] M2 — <name> · done when: <observable>
 
 ## Not doing
-- <explicitly out of scope, with the reason>
+- <explicitly out of scope>[ — <reason, when given>]
 
 ## Decisions
-- <YYYY-MM-DD> — <decision> (<why>)
+- <YYYY-MM-DD> — <decision>[ (<why>, when given)]
 
 ## Constraints
 - <deadline, platform, budget, non-negotiables>
