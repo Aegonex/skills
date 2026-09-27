@@ -747,3 +747,133 @@ Left for later:
   done-when again (the grader's observation, harmless here);
 - a leader that dispatches in the background and stops before its
   subagents finish (M3 run 2).
+
+## Subagent prompts carry the command rule (2026-09-27)
+
+The git labs: `tests/lifecycle.sh` 134/134 and `tests/multi-repo.sh`
+37/37 (git 2.54.0) on the final text. Only `assets/AGENTS.md` changed;
+the labs run the recipes, not Leader mode's prompts.
+
+The harness was a copy of v0.5.1's, one scratch folder per round with
+that round's AGENTS.md. Two additions:
+- `subtrace.py` read the Claude Code transcripts after each turn and
+  wrote `out/turn<N>/subagents.md`:
+  - per subagent, the leader's prompt and which of the rule's seven
+    phrases it holds (one command per call and line, absolute path,
+    `&&`, `$?`, lone `cd`, `cd "<folder>" &&`, `git -C`);
+  - whether the prompt says "commit there" or asks for an exit code, and
+    whether the subagent read AGENTS.md;
+  - each Bash call with its faults: multi-line, heredoc, `$?`, a lone
+    `cd`, a chain other than the one, the chain form for git or a read,
+    git without `-C`;
+  - the leader's own calls, the same way.
+  The checks still read only the leader's trace; the graders read
+  `subagents.md` and open a transcript when a line needs it.
+- V9, V12 and M3 gained two expectations. First, every writer and
+  reviewer command follows the quoted rule, and every prompt carries
+  Dispatch's quote with the rule in its slot, reworded or not, no clause
+  left out. Second, for V9 and V12, the writer of the part in `<f>` is
+  not told to commit and does not; the leader commits the part's files
+  by name, never HANDOFF.md, and the reply carries the reviewer's line.
+  For M3, each writer in a part folder is told to commit there and does,
+  and the reply carries each review line.
+The scratch folders, `subtrace.py` among them, went with the session's
+scratchpad; this record is what remains.
+
+Rounds 1 to 4 ran turn 1 of V9, V12 and M3, the turn that dispatches,
+one text per round (design, "Subagent prompts carry the command rule").
+Round 5 ran the scenarios in full, as far as they got. Sonnet
+throughout. Calls are the subagents' Bash calls; rounds 1 and 2 counted
+six phrases, before the rule named a lone `cd`.
+
+| Round | Text | Calls | With a fault | Prompts with every phrase |
+|---|---|---|---|---|
+| 1 | **Commands** as an item of Dispatch | 28 | 2 | 0 of 8 |
+| 2 | a pointer in the quote | 27 | 12 | 0 of 9 |
+| 3 | the rule in the quote | 28 | 5 | 1 of 8 |
+| 4 | 3, "as is", "told 3's quote" | 22 | 2 | 6 of 8 |
+| 5 | the rule in **Commands**, a slot in the quote | 25 | 2 | 6 of 7 |
+
+- Round 1: every prompt held one phrase at most; the leaders wrote their
+  own line ("each its own shell call"). V9's writer chained two `grep`s,
+  and its reviewer ran a multi-line call. V12's and M3's 25 calls were
+  clean.
+- Round 2: every leader passed the pointer on as "Follow the Commands
+  section", the project's `## Commands`. Three of four writers read
+  AGENTS.md; two of them still broke the rule (M3: multi-line calls, a
+  chained `cd` read). V12's reviewers ran only multi-line calls, and
+  V9's echoed `$?`.
+- Round 3: every writer prompt held the rule (six or seven phrases). Two
+  of three leaders wrote the reviewer's prompt from Review, which named
+  no rule (one or two phrases); V9's reviewer ran four calls with
+  `; echo "---EXIT:$?---"`.
+- Round 4: all four writer prompts and V9's and V12's reviewer prompts
+  held the whole rule; M3's reviewers got four phrases. The two faults
+  were M3 writers' heredoc commits. V9 and V12 ran their land go as well:
+  V9's leader, whose **Commands** now only pointed into Leader mode, ran
+  seven `git` calls without `-C`, one with `; echo "exit:$?"`, and a
+  relative remove path. So round 5 moved the rule back.
+
+Round 5, the text before the last three wording fixes: V9 (both turns,
+graded), V12 (turns 1 to 3) and M3 (turn 1, cut off before its reply).
+The coordinating session then ended the runs: V12's turn 4 and M3's
+turns 2 to 4 did not run, and only V9 was graded. The leaders' own
+commands had one fault in 98 calls, harness steps included.
+- V9: FAIL, `check.sh` 20 of 21.
+  - Both prompts held the quote with every phrase. The writer of the
+    part in `<f>` was not told to commit and did not; after the PASS the
+    leader committed README.md by name, and the reply carried the
+    reviewer's `PASS:` line. Turn 2 landed and cleaned up, every git
+    call as `git -C`, no fault in 11 calls.
+  - The check's one FAIL: the trace writes Clean up's remove without its
+    own `cd`. The call itself was `cd "<main>" && git -C "<main>"
+    worktree remove "<f>"`, but V9's session folder is `<main>`, so the
+    chain and the harness prefix are the same text, and the trace left
+    it out as the prefix. The check cannot tell them apart here.
+  - Two faults the checks do not see: the leader's commit with a
+    three-line `-m` (a `Co-Authored-By:` trailer), and the writer's
+    `cat -A "<abs>/README.md" | head -20`, a pipe the rule did not name.
+    Both led to the final wording.
+- V12, turns 1 to 3: the leader fixed README.md itself and started only
+  a reviewer, whose prompt held three phrases (no "one command per call
+  and line", `$?`, lone `cd` or chain); its three calls were clean. The
+  reply put the `PASS:` line in Thai words. HANDOFF.md stayed
+  uncommitted until exit's go; exit's calls and the commit's two had no
+  fault, git always as `git -C`, and turn 3 ended with the land question.
+- M3, turn 1: all four prompts held every phrase, the rule written out
+  and lightly reworded, and each writer in a part folder was told to
+  commit there, with the commands. Each writer's commit was one call on
+  one line; the frontend's put its `Co-Authored-By:` trailer in a second
+  `-m`. The reviewers ran `git -C "<r>" diff
+  aegonex/t-discount...aegonex/t-discount--p1` and the chained test,
+  and both passed. One fault in 19 calls: the backend writer reran its
+  test as `node --test 2>&1; echo "EXIT_CODE=$?"`, though its prompt
+  said the exit code comes from the tool result. The leader's 51 calls
+  had none.
+
+The final text (a pipe forbidden, "commit: one `-m` line", Review's full
+`diff HEAD` and `??` files, "Your reply quotes") ran in the labs only.
+
+Left for later:
+- an agent round on the final text: V9, V12 and M3 in full;
+- V9's round 5 FAIL stands: while the session folder is `<main>`, the
+  trace can drop Clean up's `cd "<main>" && ` as the harness prefix;
+  start V9's session outside `<main>`, or tell the trace to keep a chain
+  that matches the prefix;
+- `chains.py` reads only a backtick span that closes on its own line, so
+  a multi-line call in a leader's trace goes unchecked (V9's commit);
+- the checks read only the leader's trace: a subagent's commands and the
+  prompts it got show only in the transcripts, and the harness that read
+  them is gone;
+- a leader may drop clauses of the slot (V12's reviewer, three of seven),
+  and a subagent may break a rule its prompt holds (M3's `$?`);
+- V12's leaders fix the one-line typo themselves, with no writer
+  subagent (rounds 4 and 5), and put the `PASS:` line in Thai words;
+- a reviewer of a part in `<f>` may fail it for the note's untracked
+  HANDOFF.md, now one of the `??` files it reads (V12, two runs);
+- the land question does not name local-only Base commits the push
+  carries: V9's go landed aegonex setup's commit with the fix;
+- "commit: one `-m` line" does not say whether a trailer may take a
+  second `-m` on the same line, as M3's frontend writer did;
+- subagents take the user's reply-language memory: V9's writer reported
+  in Thai (internal only; the replies were in English).

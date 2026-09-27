@@ -37,8 +37,8 @@ Base: <base branch> · Remote: <remote name, or none>
   words, `a-z0-9-`), in its folder `<f>`, `<main>/.worktrees/<u>`, on branch `aegonex/<u>`. `<main>`, the first `worktree `
   path of `git -C "<folder>" worktree list --porcelain`, stays on Base; only aegonex setup writes there. A harness-made
   worktree, detached or on a branch outside `aegonex/*`, is adopted as `<f>`: `git -C "<f>" switch -c aegonex/<u> <Base>`.
-- **Commands:** one per call and line, reads too, absolute paths; no `&&` `||` `;`, `; echo $?`, `|| true` (exit code: tool
-  result, no error = 0), but install, test, done-when, remove: `cd "<folder>" && <command>`; git: always `git -C "<folder>"`.
+- **Commands**, reads too: "one command per call and line, absolute paths, no `&&` `||` `|` `;` `$?` or lone `cd`, but tests,
+  install, remove: `cd "<folder>" && <command>`; git: `git -C "<folder>"`; commit: one `-m` line"; no error: exit code 0.
 - **Open** `<u>`: `git -C "<main>" worktree prune`; `git -C "<main>" worktree add "<f>" aegonex/<u>` (no such branch:
   `git -C "<main>" worktree add -b aegonex/<u> "<f>" <Base>`); `*` in `<main>/.worktrees/.gitignore`; `cd "<f>" && <install>`
   (`none`: skip; fails: quote its first error line, go on; no retry, diagnosis, non-project command, `sudo`).
@@ -62,15 +62,15 @@ Base: <base branch> · Remote: <remote name, or none>
 Lead every file-changing request; given a part, do only it, in its folder. Reply in the user's language (`go` stays `go`).
 1. **Size** by files, never by subagent tools: 2+ modules is 2-5 parts on different files, else one part in `<f>`; every part
    has a done-when, a command or fact showing it works. A request is one ROADMAP step or task: once its last part is
-   integrated, report and stop until the user writes. What aegonex skills write (state files, setup, anchors) gets no review.
+   integrated, report (no tick) and stop until the user writes. What skills write (state files, setup, anchors): no review.
 2. **Part folders** for 2+ parts with subagents (else one by one in `<f>`: edit, subagent **Review**, commit on PASS): commit
-   `<f>` first, naming each file; per part `git -C "<f>" worktree add -b aegonex/<u>--p<k> "<p>" aegonex/<u>` and install;
+   `<f>`, naming non-state files; per part `git -C "<f>" worktree add -b aegonex/<u>--p<k> "<p>" aegonex/<u>` and install;
    `<p>`: `<root>/.worktrees/<u>--p<k>`, `<root>`: `<f>` if harness-made, else `<main>` (`*` in its `.worktrees/.gitignore`).
-3. **Dispatch** one writer subagent per part, all at once, with a standalone prompt: folder, files, done-when, install
-   command, and "Work only in <folder>, git as git -C "<folder>", commit there; never merge, push, delete or ask the user."
+3. **Dispatch** a writer per part, all at once; each prompt, a reviewer's too, stands alone: folder (`<p>` writer: commit
+   there), files, done-when, as is: "Work only in <folder>; <**Commands** quote>; never merge, push, delete or ask the user."
 4. **Review** every part, a one-line fix in `<f>` too: a fresh read-only subagent (no subagent tool: you) runs the done-when,
-   reads `git -C "<p>" diff aegonex/<u>...HEAD` (`<f>`: `git -C "<f>" status --short`, `git -C "<f>" diff HEAD`, new files).
-   Reply per part: `PASS: <done-when>, diff: <files>` / `FAIL: <why>` (unsure: FAIL); by you: end `(review not independent)`.
+   reads `git -C "<p>" diff aegonex/<u>...HEAD` (`<f>`: `status --short`, full `diff HEAD`, `??` files), told 3's quote. Your
+   reply quotes: `PASS: <done-when>, diff: <files>` / `FAIL: <why>` (unsure: FAIL); by you: end `(review not independent)`.
 5. **Integrate** only a PASS: `git -C "<f>" merge --no-ff --no-edit aegonex/<u>--p<k>` (conflict: `merge --abort`, FAIL),
-   `git -C "<f>" worktree remove "<p>"`, `git -C "<f>" branch -d aegonex/<u>--p<k>`; `<f>` work: commit it naming its files;
-   no go needed. One redo per FAIL, prompt starting `git -C "<p>" merge --no-edit aegonex/<u>`; a second FAIL: ask the user.
+   `git -C "<f>" worktree remove "<p>"`, `git -C "<f>" branch -d aegonex/<u>--p<k>`; `<f>` part: commit its files by name; no
+   go needed. One redo per FAIL, prompt starting `git -C "<p>" merge --no-edit aegonex/<u>`; a second FAIL: ask the user.

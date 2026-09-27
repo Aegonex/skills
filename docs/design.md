@@ -1850,3 +1850,135 @@ fewer, and section 7 takes one line more after small cuts ("its
 start)", "lands only the repos", whose land question then names only
 them). The versions stay `0.5.1`:
 the number is chosen when this lands.
+
+## Subagent prompts carry the command rule (2026-09-27)
+
+The defect (v0.5.1 known limits): a subagent that does not load the
+project's AGENTS.md, and none did in the scenario harness, keeps
+**Commands** only as far as the leader writes it, and Leader mode 3
+(Dispatch) and 4 (Review) asked for no command rule at all. In M3's last
+v0.5.1 round three of six subagent `node --test` runs ended in `; echo
+"EXIT_CODE=$?"`, which the leader's own prompts invited ("exits with
+status 0", "note the exit code"); a reviewer ran a bare `cd` before its
+chain; writers put several commands in one call and committed with
+heredoc messages; V9's writer and V12's reviewer each ran a multi-line
+call.
+
+Four smaller Leader mode defects came with it:
+- Dispatch's quoted sentence says "commit there" to every writer, while a
+  part in `<f>` is reviewed uncommitted (`status --short`, `diff HEAD`)
+  and committed by the leader on PASS (V9, V12: the leaders chose right).
+- Mode 2's "commit `<f>` first, naming each file" and mode 5's "`<f>`
+  work: commit it naming its files" read as covering a note's HANDOFF.md,
+  which aegonex-note leaves uncommitted for exit; M3's second v0.5.1
+  round committed it and lost the exit-first line.
+- "Reply per part" does not say whose reply: the leader's is meant to
+  carry the reviewer's line (M1 left it in the trace).
+- A leader ticked a ROADMAP step itself (M1), though ticks are exit's.
+
+The two sections have 43 lines and no spare one, and a line elsewhere
+would have to come from Go or Unit, which hold v0.4's tested strings.
+Five texts were tried, each on V9, V12 and M3's first turn
+(`docs/testing.md`, "Subagent prompts carry the command rule"):
+1. **Commands** verbatim as an item of Dispatch's list: no leader of
+   three copied it. V12's and M3's wrote their own line ("each its own
+   shell call, absolute path, no chaining"); V9's writer got none and
+   chained two `grep`s with `;` and `echo`.
+2. A pointer inside Dispatch's quote, "follow **Commands** in
+   <folder>/AGENTS.md": every leader rewrote it as "Follow the Commands
+   section", the project's `## Commands`, "for how to run tests". Three
+   of four writers opened the file and two of them still broke the rule;
+   no reviewer prompt carried it. 12 of 27 subagent calls broke the rule.
+3. The rule's text inside Dispatch's quote, with **Commands** reduced to
+   "as in Leader mode 3's quote": every writer prompt carried the rule,
+   but two of three leaders wrote the reviewer's prompt from mode 4,
+   which named no rule, and V9's reviewer echoed `$?` four times.
+4. As 3, plus "as is" before the quote and "told 3's quote" in Review:
+   every writer prompt, and V9's and V12's reviewer prompts, carried the
+   whole rule (M3's reviewers four of its seven phrases); 2 of 22
+   subagent calls broke it, both heredoc commits. But V9's leader, whose
+   **Commands** now only pointed into Leader mode, ran its land go with
+   seven `git` calls without `-C`, a `; echo "exit:$?"` and a relative
+   remove path.
+5. The rule back in **Commands**, as a quoted sentence the leader follows
+   itself, and in Dispatch's quote a slot for it, `<**Commands** quote>`,
+   which the leader fills as it fills `<folder>`.
+
+Decision: 5. A leader copies Dispatch's quote into every prompt, lightly
+reworded at most (every writer prompt of rounds 1 to 4 kept "never
+merge, push, delete or ask the user"), so the rule must be inside the
+quote; a slot is filled like `<folder>`, where a pointer (2) is passed on
+as a pointer; and the leader keeps its own rule in its own bullet (4).
+In round 5 six of seven prompts carried every clause and the leaders'
+own commands had one fault in 98 calls (a multi-line commit).
+
+Round 5 also showed three gaps, closed in the final text without another
+agent round (the coordinating session ended the runs there):
+- A pipe: V9's writer ran `cat -A "<abs>/README.md" | head -20`, which
+  the rule did not name. It now forbids `|`.
+- A commit message over several lines: V9's leader committed with a
+  three-line `-m` (a `Co-Authored-By:` trailer), as round 4's writers did
+  with heredocs. The rule now says "commit: one `-m` line".
+- Review's read of `<f>`: a parallel review of Leader mode found that
+  "new files" made reviewers fail a correct fix over a file that already
+  existed. Review now reads `status --short`, the full `diff HEAD` (no
+  path) and the `??` files of that status.
+
+**Commands** now reads: "one command per call and line, absolute paths,
+no `&&` `||` `|` `;` `$?` or lone `cd`, but tests, install, remove:
+`cd "<folder>" && <command>`; git: `git -C "<folder>"`; commit: one `-m`
+line", reads too; no error: exit code 0. It forbids any `$?`, not only
+`; echo $?`, and a lone `cd`, the two faults M3's subagents showed.
+
+Leader mode:
+- Dispatch: "each prompt, a reviewer's too, stands alone: folder (`<p>`
+  writer: commit there), files, done-when, as is: "Work only in <folder>;
+  <**Commands** quote>; never merge, push, delete or ask the user."" Only
+  a writer in a part folder `<p>` commits; a part in `<f>` is committed
+  by the leader on PASS.
+- Review: `<f>`'s read as above, the reviewer "told 3's quote", since
+  leaders write its prompt from mode 4; "Your reply quotes: `PASS: ...`",
+  so the leader's reply carries the reviewer's line as written (V12's
+  leaders put it in Thai words in every round).
+- Mode 1 reports "(no tick)"; mode 2 commits `<f>` "naming non-state
+  files"; mode 5: "`<f>` part: commit its files by name".
+
+The room came from text a rule already says:
+- Dispatch drops "install command" and `git as git -C "<folder>"`: the
+  quote carries both.
+- **Commands** drops `|| true` (its `||` forbids it), "always", the
+  `; echo` of `; echo $?`, and "tool result" (the skills keep "from the
+  tool result (no error shown: 0)"); install and remove join tests inside
+  the quote instead of "as tests" after it.
+- Review's `<f>` read leaves its two `git -C "<f>"` to the quote, and
+  "Your reply has its line:" became "Your reply quotes:".
+- Mode 1: "What skills write (...): no review." (was "What aegonex skills
+  write (...) gets no review."); mode 2 drops "first" (the order of its
+  clauses says it).
+
+Untouched: mode 2's `(with subagents; none: ...)` and mode 4's `(none:
+you)` (their lines are byte for byte v0.5.1's), done step 7, the
+`(aegonex 0.4)` headings and the `version:` lines.
+
+Changes (line counts unchanged: SKILL.md 1,415, with init 323, plan 225,
+note 137, exit 352, done 378; `repos.md` 99; the AGENTS.md sections 43
+lines, longest 125): `assets/AGENTS.md` only, **Commands** (lines 40-41)
+and Leader mode lines 65, 67, 69-70, 72-73 and 75-76. This closes three
+items of v0.5.1's "Left for later": the prompts without the rule and
+Dispatch's "commit there" for a part in `<f>`; Leader mode 2 and 5
+committing a note's HANDOFF.md; whose reply repeats the reviewer's line.
+
+Known limits:
+- A leader may still fill the slot in its own words and drop clauses:
+  V12's round 5 reviewer prompt had three of the seven. The checks read
+  only the leader's trace; the prompts show only in the transcripts.
+- A subagent may break a rule its prompt holds: in round 5 M3's backend
+  writer reran its test with `; echo "EXIT_CODE=$?"` though its prompt
+  said the exit code comes from the tool result.
+- A reviewer of a part in `<f>` sees the note's untracked HANDOFF.md, now
+  one of the `??` files it reads, and may fail the part for it (V12, two
+  runs); the leaders then reran the review with HANDOFF.md named out of
+  scope.
+- The final text's pipe, one `-m` line, Review read and "quotes" ran in
+  the labs only, not in an agent scenario.
+- Projects set up before keep their copy of the sections, as in v0.5.1.
