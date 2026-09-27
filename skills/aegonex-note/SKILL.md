@@ -42,11 +42,11 @@ When a task `t-<slug>` starts, its done-when is noted as a fact:
 
 ## Language
 
-The reply and the text of the line are in the user's language: the language of the message that
-holds the decision, dead end or fact; a message with no language of its own (only the skill's name,
-or a bare answer such as `go`, `ok`, `yes`) takes the language of the conversation so far; else that
-of `HANDOFF.md`; else English. The kind word in the file stays English (`decision`, `dead end`,
-`fact`), because `aegonex-exit` sorts by it; the reply translates it (Thai: `ตัดสินใจ`, `ทางตัน`, `ข้อสังเกต`).
+The reply and the text of the line are in the user's language, a line the agent words itself (a done-when, a land order)
+too: that of the message holding the decision, dead end or fact; a message with no language of its own (only the skill's
+name, or a bare answer such as `go`, `ok`, `yes`) takes the language of the conversation so far; else that of `HANDOFF.md`;
+else English. The kind word (`decision`, `dead end`, `fact`), `done when:`, `after:` and `(agent's call)` stay English in
+the file, since other skills search for them; the reply translates the kind (Thai: `ตัดสินใจ`, `ทางตัน`, `ข้อสังเกต`).
 
 ## Procedure
 
@@ -58,7 +58,7 @@ of `HANDOFF.md`; else English. The kind word in the file stays English (`decisio
    invented why. To fit, cut first the words that repeat the kind (a dead end needs no
    `didn't work`, `failed`, `ไม่เวิร์ค`, `ไม่ได้ผล`), then shorten the why; never cut a word that
    names what was tried or decided, and keep the user's own words for it.
-2. Secret rule, applied as you compose, then checked after step 4 with
+2. Secret rule, applied as you compose, then checked after step 4, on every file written, never skipped, with
    `git -C "<folder>" grep -n -i -E --untracked 'KEY|TOKEN|SECRET|PASSWORD|Bearer|sk-[A-Za-z0-9]|ghp_|xox[a-z]-|AKIA|[A-Za-z0-9_/+=-]{32,}' -- HANDOFF.md`;
    a hit on the new line that the rule replaces is fixed in place. The grep
    only finds candidates:
@@ -90,8 +90,8 @@ of `HANDOFF.md`; else English. The kind word in the file stays English (`decisio
    character above the section. Nothing is committed.
 5. Reply with exactly one line, and continue whatever the user asked for: `Noted (<kind>): <text>` /
    `จดแล้ว (<ประเภท>): <text>`, without the stamp and the leading `- `. No question, no summary, no
-   table. If the user's message also asked for work, the noted line comes first and the work follows
-   in the same reply.
+   table. If the user's message also asked for work, the noted line comes first and the work, or a leader's report,
+   follows in the same reply; several notes: a line each, all first.
 6. When the section now has twelve or more lines, add one more reply line:
    `Session log is long (<n> lines): run aegonex-exit when you stop.` /
    `บันทึกยาวแล้ว (<n> บรรทัด) ถ้าจะพักให้เรียก aegonex-exit`.
@@ -119,9 +119,9 @@ ended without exit.
 
 - A `ROADMAP.md` edit in a message that is not `aegonex-plan`,
   `aegonex-exit` or `aegonex-done`.
-- A reply that does not start with the noted line when a decision was just
-  made.
-- Two lines written for one fact in one file.
+- A reply that does not start with the noted line when a note was just
+  written, even above a leader's report.
+- Two lines written for one fact in one file, or a file written without step 2's grep.
 - A question mark in the reply.
 - `echo ... >> HANDOFF.md`, a `HANDOFF.md` in the main folder, a `cd`, `&&` `||` `;` in a command, or git without `-C "<folder>"`.
 

@@ -269,7 +269,7 @@ where the shell already stands; the install alone is one chain, `cd "<unit folde
    `git -C "<here>" switch -c aegonex/<u> <Base>` (the harness's own branch
    stays); a branch held by another folder is not adopted: the reply names that folder.
 5. **reply**: the go part is at most 2 lines, no table or question. First
-   `**Opened:** .worktrees/<u>` / `**เปิดแล้ว:** .worktrees/<u>` (an adopted
+   `**Opened:** .worktrees/<u>` / `**เปิดแล้ว:** .worktrees/<u>`, also for a folder that existed before the go (an adopted
    folder: its path), then one line of what the go did, one clause per action
    in the order they ran, joined by ` · `: `moved <files> (<b> kept)` /
    `ย้าย <files> แล้ว (ยังเก็บ <b>)`, `updated the main folder` /

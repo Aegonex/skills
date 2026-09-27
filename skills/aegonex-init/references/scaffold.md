@@ -37,10 +37,10 @@ Read only manifests and top-level docs, never source:
 In `<main>`, on `<Base>`. Moving from a branch `<b>`: `AGENTS.md` and
 `CLAUDE.md` start from `<b>`'s copies when `<b>` has them:
 `git -C "<main>" checkout <b> -- <file>`.
-- `AGENTS.md` missing: write it from `assets/AGENTS.md`, filled in.
-  Present without `## Working mode (aegonex 0.4)`: append everything from
-  that heading to the end of `assets/AGENTS.md`, filled in, and add the
-  install line under `## Commands` when it has none; nothing else changes.
+- `AGENTS.md` missing: write it from `assets/AGENTS.md`, filled in. Present without
+  `## Working mode (aegonex 0.4)`: append everything from that heading to the end of `assets/AGENTS.md`, filled in,
+  and add the install line under `## Commands` when it has none; nothing else changes. Under a parent folder
+  (`references/repos.md`), then append `assets/AGENTS-repos.md` when its heading is missing, a new file too.
 - `CLAUDE.md` missing: copy `assets/CLAUDE.md`. Present without
   `@AGENTS.md`: add that line at its top.
 - `<main>/.worktrees/.gitignore` holding `*`, when missing. A `.dockerignore` that exists gets the

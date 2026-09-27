@@ -1765,3 +1765,88 @@ Known limits:
   its prompt.
 - Each of these sits in the Review prompt, item 5 or step 7's FAIL path,
   which are other work; this change leaves them as they were.
+
+## A parent session's notes and land go, and init's Opened line (2026-09-27)
+
+The defects, from the scenario rounds of the command rule (`docs/testing.md`,
+its "Left for later"); none comes from that rule:
+1. init's go reply had no `**Opened:**` line when the first step's folder
+   already existed (M1, 2 of 3 runs). Step 4 opens only a missing folder,
+   and the agents read step 5's line as "opened by this go".
+2. `repos.md` section 7's land go ran the landed check once, before Sync,
+   while section 3 asks callers to rerun it after Sync (M3).
+3. `scaffold.md`'s "`AGENTS.md` missing" path did not name the Repos
+   section, which `repos.md` section 11 names: M1 round 2 wrote admin's new
+   AGENTS.md without it.
+4. Note in a parent session (M3): lines in English under a Thai reply, the
+   secret grep skipped, no `Noted (<kind>) in <r>: ...` line opening the
+   reply, and once the note written after the parts merged. Section 8 read
+   "Note's step 3 in each repo", which the agents took for the whole
+   procedure, and section 7's "Then note writes" set no place against
+   dispatch.
+5. The land order, the agent's call, never became an `(agent's call)`
+   decision (M3). The v0.5 spec says "a Decision marked `(agent's call)`
+   (a task: its Note)", but section 7 never asked note for it.
+6. The land go's reply wrote `.worktrees/<u>` without `<r>/`: section 7
+   pointed at the single-repo form, against section 1's "paths read
+   `<r>/.worktrees/<u>`".
+
+Decisions:
+- The Opened line always opens init's go reply and names the step's
+  folder, whether the go opened it or it existed (init step 5, `repos.md`
+  section 5). A second label for an existing folder (`Working in:`) was
+  turned down: one more form, and the `init-go` judge and every earlier
+  round expect `**Opened:**`.
+- The land go runs the landed check again only when Sync merged anything,
+  the grader's fix, and section 3 now says the same, so done and the
+  parent go read one rule. A record comes in only through a merge, and
+  Sync's own `merge-base --is-ancestor` exit code says whether it merged.
+  An unconditional rerun is simpler to state, but it is a read for
+  nothing whenever Sync merged nothing, as in every M3 round so far,
+  where no agent reran it.
+- `scaffold.md`: after either `AGENTS.md` path, a repo under a parent
+  folder gets `assets/AGENTS-repos.md` when its heading is missing, a new
+  file too.
+- `repos.md` section 8 runs "Note's steps 1-6 in each repo concerned", and
+  the reply starts with the Noted lines. note's Language covers a line the
+  agent words itself (a done-when, a land order) and keeps `done when:`,
+  `after:` and `(agent's call)` English with the kind words, since other
+  skills search for them: a translated `done when:` would hide the check
+  from done step 3. Step 2's grep runs on every file written, never
+  skipped; step 5 puts the noted lines first, a line each, above a
+  leader's report; the red flags say both.
+- Section 7: before dispatch, note writes, in the user's language, each
+  repo's done-when, each consumer's record and, unless the user named
+  the order, a decision in each repo that backend lands first, ending
+  `(agent's call)`. Turned down: the marker
+  on the land question alone (seen when the user decides, kept nowhere,
+  and wrong when the user named the order), and the decision in the
+  consumer alone (the provider's next session would not know why it lands
+  first). A line in each repo is plan's rule for milestones, an
+  `(agent's call)` Decisions line in each touched ROADMAP.md, carried to a
+  task; exit folds it into Decisions. The same sentence ends "its reply
+  lines open the report": in the first M3 rerun the leader read note's
+  step 5 and section 8, wrote the notes before dispatch, and still opened
+  its report with the review lines, since the report's form is in section
+  7 and the Leader mode of AGENTS.md, not in note. Section 7 is where the
+  leader composes the report, so the rule is said there too. The
+  decision is described, not quoted: the first two M3 reruns copied the
+  quoted `backend lands first (agent's call)` word for word into a Thai
+  session's notes. The third, with the description, still wrote the
+  lines in English first and rewrote them in Thai only after the parts
+  merged, so the sentence names the language too: note's Language says
+  it, but the leader composes from section 7's English prose.
+- Section 7's reply: "a line per repo in the land go's form, paths
+  `<r>/.worktrees/<u>`". Its "led by the repo" went, for the line budget:
+  section 1 already says reply lines lead with `<r>: `.
+
+Line counts do not change: SKILL.md 1,415 (init 323 and note 137 edited
+in place; plan, exit and done untouched), `repos.md` 99, `scaffold.md` 89;
+`assets/` is untouched, so the AGENTS.md sections stay 43 lines under the
+same `(aegonex 0.4)` headings. To fit `repos.md`, section 3 names the
+sibling as `<main>/../<r>` (the Repos section's own form), one line
+fewer, and section 7 takes one line more after small cuts ("its
+**Open**", "its records", "stops the rest", "(init's go or the leader's
+start)", "lands only the repos", whose land question then names only
+them). The versions stay `0.5.1`:
+the number is chosen when this lands.

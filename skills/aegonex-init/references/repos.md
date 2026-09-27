@@ -24,13 +24,12 @@ before `done when:` (`- [ ] M5 — cart page · after: backend m3 · done when: 
 is a HANDOFF line `t-<slug> after: <r> <v>`, written only while the provider's `aegonex/<v>` exists. Never a cycle. Land
 order: a unit after every unit its record names, else folder-name order. In such a repo milestone numbers never change.
 ## 3. The landed check
-Read only; `<S>` = `<P>/<r>` (in a session inside one repo, `<P>` is the folder holding `<main>`), `<SB>` = `<remote>/<Base>`
-from `<S>/AGENTS.md` (no remote: `<Base>`). `git -C "<S>" rev-parse --verify -q refs/heads/aegonex/<v>` printing a sha: not
-landed; for a task, no sha is landed. For `m<k>` then `git -C "<S>" grep -q -E "^- \[x\] M<k> .* closed
-[0-9]{4}-[0-9]{2}-[0-9]{2}" <SB> -- ROADMAP.md`: exit 0 is landed. No `<S>`, a git error or a cycle: stop, `<u>: after: <r>
-<v> cannot be checked: <reason>` / `<u>: ตรวจ after: <r> <v> ไม่ได้: <reason>`. Nothing in `<S>` is fetched, switched, opened
-or written; besides these, only its AGENTS.md is read. Callers rerun it after Sync (which may bring a record in), before
-**Land**.
+Read only; `<S>` = `<P>/<r>` (from inside one repo, `<main>/../<r>`), `<SB>` = `<remote>/<Base>` from `<S>/AGENTS.md` (no
+remote: `<Base>`). `git -C "<S>" rev-parse --verify -q refs/heads/aegonex/<v>` printing a sha: not landed; for a task, no sha
+is landed. For `m<k>` then `git -C "<S>" grep -q -E "^- \[x\] M<k> .* closed [0-9]{4}-[0-9]{2}-[0-9]{2}" <SB> -- ROADMAP.md`:
+exit 0 is landed. No `<S>`, a git error or a cycle: stop, `<u>: after: <r> <v> cannot be checked: <reason>` / `<u>: ตรวจ
+after: <r> <v> ไม่ได้: <reason>`. Nothing in `<S>` is fetched, switched, opened or written; besides these, only its AGENTS.md
+is read. Callers rerun it before **Land** when Sync merged anything (it may bring a record in).
 ## 4. Sessions
 One session per repo at a time; a parent session holds each repo it opens a unit in. A `worktree add` refusal (`already
 exists`, `already checked out`): another session holds that unit; quote it and stop, never retry under another name.
@@ -51,8 +50,8 @@ repo (`Which branch is Base in <r>?` / `Base ของ <r> คือ branch ไ�
 Go: setup runs in every repo where it is due (init's setup plus section 11, or section 11 alone) whose main folder is clean
 (apart from what setup commits) and on its Base, or will be after the move, and needs no question: each named in a Setup row,
 one `chore: aegonex setup` commit per main folder. Move, update and open run only in the first step's repos, in land order.
-Reply at most 2 lines: `**Opened:** backend/.worktrees/t-discount, frontend/.worktrees/t-discount`, then one line of clauses
-led by `<r>: `. Then Leader mode, section 7.
+Reply at most 2 lines: `**Opened:** backend/.worktrees/t-discount, frontend/.worktrees/t-discount` (every folder the first
+step works in, even one that existed), then one line of clauses led by `<r>: `. Then Leader mode, section 7.
 ## 6. Plan in the parent
 The repos a feature changes and which lands first come from the user's own words (never words they did not write), else the
 agent's call: an `(agent's call)` Decisions line in each touched ROADMAP.md (plan's `My call` row). Stops, a line each led by
@@ -65,23 +64,24 @@ carry the record. The brief is plan's, its title naming each ROADMAP.md it goes 
 column in the steps table and a row `Lands after` / `land หลัง` (`frontend M5 after backend M3`). Go: plan's go per repo, in
 land order; one reply of at most 3 lines naming each folder and commit, then step 1 as `<r> <step> · done when: ...`.
 ## 7. Leader mode across repos
-A parent request is one ROADMAP step (one repo) or one cross-repo task. That task opens, on init's go or when the leader
-starts it, in each repo in land order with the repo's **Open**; a repo without the Repos heading stops it first (section 6's
-line). Then note writes each repo's `t-<slug> done when:` and each consumer's record. A part never spans repos: each repo is
-at least one part, 2-5 parts in all, dispatched at once in `<r>/.worktrees/<u>--p<k>`; more: split the task by repo,
-providers first. Review lines lead with the repo (`frontend p1: PASS: ...`); a part integrates into its repo's `aegonex/<u>`.
-When every repo's last part is integrated, folders whose status lists HANDOFF.md end the report with one line, `run
-aegonex-exit first: HANDOFF.md in <r>/.worktrees/<u>, ... has notes not saved`; else one land question in land order, `Land?
-backend, then frontend: push aegonex/t-discount to main, remove backend/.worktrees/t-discount, frontend/.worktrees/t-discount
-and their aegonex/t-discount: Not yet / go` (Thai `ยังไม่ land`; each Base named when they differ). Its go, per repo in
-order: the landed check of the unit's records, always run (a provider cleaned up on this go passes it); Sync as
-`aegonex-done` step 2 says; **Land**; **Clean up**. A repo that does not finish Clean up (a stop, a pull request,
-a refusal) stops the ones after it, left as they are. Reply: a line per repo in the land go's form (landed, the pull request
-with the folder kept, the stop, or `not reached` / `ยังไม่ได้ทำ`), led by the repo, then `Next:`. Asked to, the leader lands
-alone the repos whose parts are all integrated: the question names only them; a consumer still needs its check.
+A parent request is one ROADMAP step (one repo) or one cross-repo task. That task opens (init's go or the leader's start) in
+each repo in land order with its **Open**; a repo without the Repos heading stops it first (section 6's line). Before
+dispatch, note writes, in the user's language, each repo's `t-<slug> done when:`, each consumer's record and, unless the user
+named the order, a decision in each repo that backend lands first, ending `(agent's call)`; its reply lines open the report.
+A part never spans repos: each repo is at least one part, 2-5 parts in all, dispatched at once in `<r>/.worktrees/<u>--p<k>`;
+more: split the task by repo, providers first. Review lines lead with the repo (`frontend p1: PASS: ...`); a part integrates
+into its repo's `aegonex/<u>`. When every repo's last part is integrated, folders whose status lists HANDOFF.md end the
+report with one line, `run aegonex-exit first: HANDOFF.md in <r>/.worktrees/<u>, ... has notes not saved`; else one land
+question in land order, `Land? backend, then frontend: push aegonex/t-discount to main, remove backend/.worktrees/t-discount,
+frontend/.worktrees/t-discount and their aegonex/t-discount: Not yet / go` (Thai `ยังไม่ land`; each Base named when they
+differ). Its go, per repo in order: the landed check of its records, always run (a provider cleaned up on this go passes it);
+Sync as `aegonex-done` step 2 says; the check again if Sync merged anything; **Land**; **Clean up**. A repo that does not
+finish Clean up (a stop, a pull request, a refusal) stops the rest. Reply: a line per repo in the land go's form, paths
+`<r>/.worktrees/<u>` (landed, the pull request with the folder kept, the stop, or `not reached` / `ยังไม่ได้ทำ`), then
+`Next:`. Asked to, the leader lands only the repos whose parts are all integrated; a consumer still needs its check.
 ## 8. Note
-Note's step 3 in each repo the fact concerns (never `<main>`; no unit folder: Not saved there); a record: a `fact` line in
-each consumer. Reply `Noted (<kind>) in backend, frontend: <text>` / `จดแล้ว (<ประเภท>) ใน backend, frontend: <text>`.
+Note's steps 1-6 in each repo concerned (never `<main>`; no unit folder: Not saved there); a record: a `fact` line in each
+consumer. The reply starts `Noted (<kind>) in backend, frontend: <text>` / `จดแล้ว (<ประเภท>) ใน backend, frontend: <text>`.
 ## 9. Exit
 Exit's steps 1-8 run for each repo the session worked in (after a compaction: those whose unit folders list files or whose
 HANDOFF.md has a Session log), with one brief whose rows and action line name each repo (`backend: HANDOFF.md, ROADMAP.md ·

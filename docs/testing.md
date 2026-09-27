@@ -628,3 +628,122 @@ Left for later (outside this change):
 - reads chained to a `cd` (V10 rounds 1 and 2, M1 round 3), as in
   v0.5.1; M1 round 3's is missing from its trace, which is all
   `chains.py` reads.
+
+## Results for a parent session's notes and land go, and init's Opened line (2026-09-27)
+
+The fixes to the parent-session and init-go items of v0.5.1's "Left
+for later" (design, "A parent session's notes and land go, and init's
+Opened line"). The git labs: `tests/lifecycle.sh` 134/134 and
+`tests/multi-repo.sh` 37/37 (git 2.54.0) on each text below, the final
+one included.
+
+The harness changed with the fixes:
+- M1's go expectation asks for the Opened line naming
+  `backend/.worktrees/m3`, a folder that existed before the go.
+- M3's turn 1 asks for note before any part folder or dispatch, its
+  steps 1-6 in each repo, the text in Thai (the land-order decision
+  included, ending `(agent's call)`), note's grep on each file written,
+  and a reply that opens with the `จดแล้ว (<ประเภท>) ใน <repos>: <text>`
+  lines.
+- Before M3's turn 4, `teammate.sh` puts a teammate's commit on
+  frontend's origin main (plumbing, no push, so `push-order.log` stays
+  the session's own). The land go's Sync in frontend then merges it, and
+  turn 4 asks for the landed check again after that Sync, and for reply
+  paths written `<r>/.worktrees/<u>`. In every M3 round before, Sync
+  merged nothing, so the rerun was never exercised.
+- The graders also read the transcripts of each turn's agent and its
+  subagents, not only the traces.
+The harness lived in the session scratchpad, which was emptied before
+this was written; the transcripts were kept, and run 4 below is read
+from its transcript.
+
+M1 (Sonnet, on the text with the Opened line, `scaffold.md`'s Repos
+line and note's changes; M1 reads none of the later section 7 edits):
+- Turn 2's reply opened with `**เปิดแล้ว:** backend/.worktrees/m3`,
+  although the folder existed before the go (v0.5.1 rounds 1 and 3 left
+  the line out for the same folder, round 2 wrote it).
+- admin's new AGENTS.md has the Repos section, from `scaffold.md`'s new
+  line (v0.5.1 round 2 wrote it without).
+- Checks 30/31; the grader failed M1 outside this work: turn 1's chained
+  reads (`cd "<P>" && pwd && ls -la`, `cat ... || echo`), the leader's
+  own review with the Agent tool present (`review not independent`), and
+  `docs: M3 step 3 done`, a ROADMAP.md tick the leader committed.
+
+M3 turn 1 ran four times, the text changing between runs:
+- Run 1, on the first text. Note ran before dispatch, its grep on each
+  HANDOFF.md, the done-when in Thai, the record, and a decision in each
+  repo; but the decision copied section 7's quoted English
+  `backend lands first (agent's call)`, and the reply opened with the
+  review lines, no Noted line, although the leader had read note's step
+  5 and section 8. So section 7 now says note's reply lines open the
+  report.
+- Run 2: the reply opened with the noted lines. But every note line was
+  English, and the leader committed the notes before dispatch
+  (`docs: note t-discount`), so turn 1 ended with the land question, as
+  in v0.5.1 round 2. It also chained `cd "<P>/backend" && git ...`,
+  made a part folder inside the task folder and deleted its branch with
+  `branch -D`, and dispatched in the background, then stopped; the
+  harness session relayed each subagent's final message to it word for
+  word. Not continued. Section 7 now describes the decision instead of
+  quoting it.
+- Run 3, all four turns (below). Turn 1 wrote the notes before the part
+  folders, in English, then rewrote both files in Thai after the parts
+  merged, quoting note's language rule. So section 7 names the language.
+- Run 4, turn 1 only, on the final text. The notes were Thai on the
+  first write (`decision: backend land ก่อน frontend (agent's call)`, the
+  done-when lines, frontend's record), written before any part folder,
+  with the grep on each HANDOFF.md after it. But the leader committed
+  them (`chore: notes for t-discount (HANDOFF.md)`), as in run 2, so the
+  turn ended with the land question, and the reply opened with a summary
+  of the notes, not the `จดแล้ว` lines. It also made `out/turn1` in the
+  parent folder and removed it (the harness's output path).
+
+M3 run 3 (Sonnet, four turns): checks 36/37, grader FAIL.
+- Turn 1: `จดแล้ว (ตัดสินใจ) ใน backend, frontend: backend land ก่อน
+  (agent's call)` and three more noted lines opened the reply, then the
+  review lines led by the repo, then the exit-first line; nothing
+  committed. Two writers and two fresh reviewers, each test as
+  `cd "<part folder>" && node --test`; the backend writer ran add and
+  commit in one multi-line call with `$(cat <<'EOF' ...)`. The grader
+  failed the note's first English write.
+- Turn 2: one exit brief for both repos; frontend's HANDOFF.md kept the
+  record as a Note line. Its Stopped at and Next step are English under
+  a Thai brief, and were committed and pushed; the grader failed that.
+- Turn 3: `backend b683f7b · frontend 69cbecd`, then the land question,
+  backend first. The one failed check wants the literal `Land?`; the
+  agent wrote the question in Thai, and section 7 and AGENTS.md give
+  only `ยังไม่ land` in Thai, so the grader found the check wrong.
+- Turn 4: frontend's landed check before Sync; Sync merged the
+  teammate's commit; the check again; **Land**; Clean up as the chain;
+  pushes backend, then frontend. The reply: `backend: ... ลบ
+  backend/.worktrees/t-discount แล้ว`, the same for frontend, then
+  `ต่อไป:`.
+
+Latest state: init's Opened line, the Repos section in a new AGENTS.md
+under a parent, the landed check after a Sync that merged, and the land
+go's `<r>/` paths passed where tested (M1, M3 run 3). Note in a parent
+session met every point in some run, but no single run met all: run 3
+missed the first write's language, run 4 the Noted form and, through
+Leader mode's commit, the exit-first line.
+
+Left for later:
+- Leader mode 2 and 5 commit `<f>` work, the notes included, before
+  dispatch (M3 runs 2 and 4); the turn then ends with the land question,
+  not the exit-first line;
+- the leader's reply form for notes written before dispatch: run 4 led
+  with a summary, not note's `จดแล้ว (<ประเภท>) ใน <repos>:` lines;
+- exit writes HANDOFF.md's Stopped at and Next step in English under a
+  Thai brief (M3 run 3, turn 2); its step 7 read-back checks only the
+  length;
+- the whole Thai land question, or a line saying `Land?` stays English
+  like `go` (M3 run 3, turn 3; `mcheck.sh` expects `Land?`);
+- the leader's own review with a subagent tool present, and a ROADMAP.md
+  tick by the leader (M1);
+- the Dispatch prompt carries no command rule (M3 run 3's writer);
+- chained reads and git after a `cd` (M1 turn 1, M3 run 2), reads by a
+  relative path (M3 run 3);
+- Sync's `<Base>` pair, which backend's Sync skipped (M3 run 3);
+- after a Sync that merged code, the land go pushes without running the
+  done-when again (the grader's observation, harmless here);
+- a leader that dispatches in the background and stops before its
+  subagents finish (M3 run 2).
