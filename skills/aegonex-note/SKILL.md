@@ -4,7 +4,7 @@ description: Use the moment something happens in a session that git cannot recon
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.1"
+  version: "0.5.0"
 ---
 
 # aegonex-note
@@ -69,7 +69,7 @@ of `HANDOFF.md`; else English. The kind word in the file stays English (`decisio
      `TOKEN`, `SECRET` or `PASSWORD` name, a password inside a URL
      (`user:<redacted>@host`), and any key-shaped string. A prefix or
      suffix of a secret is a secret.
-3. Find the folder: `git -C "<current folder>" worktree list --porcelain`; a unit folder has a
+3. Find the folder: `git -C "<here>" worktree list --porcelain`; a unit folder has a
    `branch refs/heads/aegonex/…` line. Every command is its own tool call on one line (no `&&`, `||`, `;`;
    exit codes from the tool result). Run each git command of this skill exactly as written, with `-C` and
    the absolute folder, even when the shell already stands there; never `cd` (into the milestone folder or
@@ -78,6 +78,7 @@ of `HANDOFF.md`; else English. The kind word in the file stays English (`decisio
    of the unit folder you work in. Noted from a `t-<slug>` folder into the milestone folder, the text
    starts with `t-<slug>: `. With no unit folder at all, write nothing and reply
    `Not saved (no work folder is open): <text>` / `ยังไม่ได้บันทึก (ยังไม่มีโฟลเดอร์งาน): <text>`.
+   `<here>` is the folder the session opened in (removed since: the shell's folder); `not a git repository` there: read `../aegonex-init/references/repos.md` and follow it.
 4. Append the line under `## Session log` at the end of that `HANDOFF.md`,
    with the file tool in UTF-8, never through `echo` or `printf`:
    - the section exists: append the line after its last line;
@@ -120,7 +121,7 @@ ended without exit.
   `aegonex-exit` or `aegonex-done`.
 - A reply that does not start with the noted line when a decision was just
   made.
-- Two lines written for one fact.
+- Two lines written for one fact in one file.
 - A question mark in the reply.
 - `echo ... >> HANDOFF.md`, a `HANDOFF.md` in the main folder, a `cd`, `&&` `||` `;` in a command, or git without `-C "<folder>"`.
 

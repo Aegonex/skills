@@ -46,10 +46,9 @@ In `<main>`, on `<Base>`. Moving from a branch `<b>`: `AGENTS.md` and
   `@AGENTS.md`: add that line at its top.
 - `<main>/.worktrees/.gitignore` holding `*`, when missing. A `.dockerignore` that exists gets the
   line `.worktrees` (one call each: `ls -a "<main>"`, then, if it lists `.worktrees`, `ls -a "<main>/.worktrees"`).
-- `git -C "<main>" add -- <files>` and
-  `git -C "<main>" commit -m "chore: aegonex setup" -- <files>`, where
-  `<files>` are `AGENTS.md`, `CLAUDE.md` and `.dockerignore` when they
-  changed, the user's own edits to them included.
+- `git -C "<main>" add -- <files>` and `git -C "<main>" commit -m "chore: aegonex setup" -- <files>`, where
+  `<files>` are `AGENTS.md`, `CLAUDE.md` and `.dockerignore` when they changed, the user's own edits to them
+  included; never `.worktrees/.gitignore`, which ignores itself (git refusing it: leave it out, never `add -f`).
 - No commit yet (`git -C "<main>" rev-parse --verify -q HEAD` prints
   nothing): `<files>` also name every top-level entry
   `git -C "<main>" -c core.quotePath=false status --short` lists, except `.env*`, dependency and

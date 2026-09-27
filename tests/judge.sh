@@ -1,5 +1,6 @@
 #!/bin/bash
 # usage: judge.sh <init|init-go|plan|note|exit|done|done-fail|done-wait|after-go|keep-ask> <brief-file> <fixture-dir> [th|en]
+# (v0.5: <fixture-dir> may be a parent folder holding several repos; the Opened line may lead with <repo>/)
 # Checks the brief's shape (v0.3: bold title, table, action line, go question last),
 # then prints disk facts about the fixture for the scenario-specific assertions.
 kind="$1"; brief="$2"; fx="$3"; lang="$4"; fail=0
@@ -14,7 +15,7 @@ if [ "$kind" = after-go ]; then
   ck "no question" $(! grep -q '?' "$brief" && [ "$gos" = 0 ]; echo $?)
 elif [ "$kind" = init-go ]; then                     # init's go: 2 lines (Opened, what go did), then the step's report
   second=$(grep . "$brief" | sed -n 2p)
-  ck "first line is the Opened line" $(echo "$first" | grep -Eq '^\*\*(Opened|เปิดแล้ว):\*\* `?\.worktrees/'; echo $?)
+  ck "first line is the Opened line" $(echo "$first" | grep -Eq '^\*\*(Opened|เปิดแล้ว):\*\* `?([A-Za-z0-9._-]+/)?\.worktrees/'; echo $?)
   ck "the go part has no table or question" $(! printf '%s\n%s\n' "$first" "$second" | grep -q '^|\|?'; echo $?)
 elif [ "$kind" = keep-ask ]; then
   rem=$(grep -o '\*\*remove\*\*' "$brief" | wc -l | tr -d ' ')
@@ -53,6 +54,11 @@ thai=$(count '\p{Thai}' "$brief"); body=$(grep -cvE '^[[:space:]]*$|^\|[ :|-]+\|
 [ "$lang" = en ] && ck "reply in English ($thai Thai lines)" $([ "$thai" = 0 ]; echo $?)
 echo "--- disk facts: $fx"
 cd "$fx" || exit 1
+if ! git rev-parse --git-dir >/dev/null 2>&1; then   # v0.5: a parent folder; the facts of each repo in it
+  echo "parent: $(ls -A | tr '\n' ' ')"
+  for d in */; do [ "$(git -C "$d" rev-parse --show-prefix --git-dir 2>/dev/null)" = "$(printf '\n.git')" ] && bash "$0" facts "$brief" "$fx/${d%/}" "" | sed -n '/^--- disk facts/,$p'; done
+  exit $fail
+fi
 echo "branch=$(git branch --show-current) head=$(git rev-parse --short HEAD)"
 echo "status: $(git status --short | tr '\n' ' ')"
 echo "log: $(git log --oneline -4 | tr '\n' '|')"

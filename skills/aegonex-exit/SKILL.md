@@ -4,7 +4,7 @@ description: Use when a work session is ending or must be handed off — "ปิ
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.1"
+  version: "0.5.0"
 ---
 
 # aegonex-exit
@@ -41,7 +41,7 @@ skill's name, or a bare answer such as `go`, `ok`, `yes`) takes the conversation
 language the file or the template already uses: `HANDOFF.md` (step 5, carried lines translated) and
 the new `ROADMAP.md` lines of step 3 (Decisions, new steps); a number or name replaced inside an
 existing line leaves the rest of that line as it was. Headings, the markers `Branch:`, `HEAD:`,
-`done when:`, `docs:`, `(in progress)` and `t-<slug> done when:` (other skills read them), paths,
+`done when:`, `docs:`, `(in progress)`, `after:` and `t-<slug> done when:` (other skills read them), paths,
 commands, branch names and commit ids stay as they are. Labels here are English and Thai; for
 another language, translate the English.
 
@@ -55,7 +55,8 @@ harness prefix cd's there; never `cd` to run a read.
 
 ### 1. Git facts
 
-`git -C "<current folder>" worktree list --porcelain`: `<main>` is its first `worktree` path; a unit
+`<here>` is the folder the session opened in (removed since: the shell's folder); `not a git repository` there: read `../aegonex-init/references/repos.md` and follow it.
+`git -C "<here>" worktree list --porcelain`: `<main>` is its first `worktree` path; a unit
 folder is one with a `branch refs/heads/aegonex/…` line. The state folder is the `aegonex/m<n>`
 folder that is not closed (`git -C "<f>" log -1 --first-parent --no-merges --format=%s` is not
 `chore: close m<n>`); else the unit folder the session worked in. With no unit folder at all, the
@@ -77,8 +78,8 @@ Today's date comes from `date +%F` (PowerShell: `Get-Date -Format yyyy-MM-dd`), 
 commit, a file or an example in this skill. Reads: `HANDOFF.md`, `ROADMAP.md`, `<main>/AGENTS.md`
 for its Working mode and Leader mode sections (never the unit's copy: a unit branch made before
 setup lacks them), `assets/HANDOFF.md` (the file beside this SKILL.md, read by that path) and git
-output. File names come from the `status --short` and `worktree list` output above; `ls` and `find`
-are never run, on the project or on the skill folder. Code is seen through the diff above, untracked
+output. File names come from the `status --short` and `worktree list` output above; `ls` (but the one
+`repos.md` names) and `find` are never run, on the project or on the skill folder. Code is seen through the diff above, untracked
 files by name only; no source file, document, manifest or README is opened, except a file whose
 anchor line step 4 edits.
 
@@ -152,11 +153,11 @@ Required slots:
 - **Next step**: one action (never two joined by `then` / `แล้ว`), the first thing the next session
   does, tagged with its unit: `(M<n>)` or `(t-<slug>)`
 - **Dead ends** and **Notes for the next session**: the old lines this session did not disprove or
-  replace, in their order, then today's; an open task's `t-<slug> done when: ...` line is a Note. A
-  task as the state folder writes each decision made today as a Note `YYYY-MM-DD — <decision> (<why>)`,
+  replace, in their order, then today's; an open task's `t-<slug> done when:` and `t-<slug> after:` lines
+  are Notes. A task as the state folder writes each decision made today as a Note `YYYY-MM-DD — <decision> (<why>)`,
   and while a closed `m<n>` waits for its pull request the last Note is `M<n> closed, waits for its pull request (aegonex/m<n>)`
   / `M<n> ปิดแล้ว รอ merge pull request (aegonex/m<n>)`, never twice: a carried copy moves last, and none
-  is kept once `m<n>` no longer waits. Past 60 lines, drop carried lines from the top of Dead ends, then of Notes.
+  is kept once `m<n>` no longer waits. Past 60 lines, drop carried lines from the top of Dead ends, then of Notes, never a `t-<slug> after:` line.
 - **Suggested skills**: `aegonex-init` first, then what the next step needs (`aegonex-done` when it
   lands a task or closes a milestone)
 
@@ -254,6 +255,8 @@ line, the land question of the Go rule in `<main>/AGENTS.md`. On no, one line: s
 
 Only when the user asks to push or merge what they have. `<u>` is the unit they named, else the unit
 folder `<f>` the session worked in; its in-flight files are in the action line (Stopped at: step 5).
+A unit with an `after:` record (its ROADMAP line, or a `t-<slug> after:` line) is pushed only once the landed check of
+`../aegonex-init/references/repos.md`, run before step 5, passes; until then the question stays step 8's and the action line and Stopped at read `committed, not pushed: lands after <r> <v>` / `commit แล้ว ยังไม่ push: รอ <r> <v>`.
 The action line becomes `**Will commit:** <files> with message <message>, then bring in <Base> (Sync), scan for keys and push aegonex/<u> to <Base> (unfinished)`
 / `**จะ commit:** ... แล้วดึง <Base> มารวม (Sync) ตรวจหา key และ push aegonex/<u> เข้า <Base> (ยังไม่เสร็จ)`;
 the question `Commit and push now?` / `commit และ push เลยไหม?`, options `Don't push` / `ไม่ต้อง push`
@@ -320,7 +323,7 @@ the user's decision, asked in the closing question. Agents without this skill co
 - "I'll tick this step, the code is basically done."
 - Writing HANDOFF.md in English because the old file was.
 - `npm install`, `npx`, `pytest`, `cargo test` or any runner in a command.
-- `ls` or `find` (the skill folder too), `cat` or a file read of source, docs or README "for context".
+- `ls` (but `repos.md`'s) or `find` (the skill folder too), `cat` or a file read of source, docs or README "for context".
 - A `cd` before a read, `&&` `||` `;` in a command, or git without `-C "<absolute folder>"`.
 
 ## Quick reference

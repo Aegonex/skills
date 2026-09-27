@@ -44,6 +44,28 @@ and sets `GIT_CEILING_DIRECTORIES` to it. Without that guard, an empty run
 folder (macOS `mktemp -d` fails in some sandboxes) sends every scenario
 into the repository you ran it from: that happened once, on this repo.
 
+## Git lab (v0.5)
+
+`bash tests/multi-repo.sh` does the same for a parent folder holding
+several repos, built by `tests/fixtures/make-multi-fixture.sh <dir>
+[--protected <r>] [--repos <n>] [--ticked] [--no-milestones]
+[--no-repos-section] [--git-init-parent]`: `<dir>/shop` holds backend
+(`m3` open, 2 of 3 steps ticked), frontend (`m5` open, all ticked,
+`after: backend m3`), each ticked step's code committed in its unit
+folder, admin (not set up), `docs/` and `notes.txt`, with
+bare remotes in `<dir>/remotes` whose hooks log each push to
+`<dir>/push-order.log`. It checks finding the repos (a subfolder and a
+linked worktree are not repo roots, a plain folder exits 128), the
+landed check before and after a milestone's close push and after a
+squash-merged pull request, `M3` against `M30`, a cross-repo task whose
+provider push is refused (the consumer stays untouched, then lands
+second), a unit opened before the Repos-section commit (done's 7.4.2
+keeps that commit and goes on with `-D`; the next unit lands it), the
+nested-repo guard, a closed line saved with CRLF, a frontend session
+finding backend as `<main>/../backend`, a record brought in by Sync that
+stops the rerun check, and that nothing is written in the parent. 37
+checks. Same run-folder guard as `lifecycle.sh`.
+
 ## Method
 
 1. RED: give a cheap model (Sonnet) the fixture path and the user's message
@@ -276,3 +298,53 @@ question, exit's go reply ended with the land question, and the land go
 removed the folder. Minor notes left for later: `ls` and `cat` with
 relative paths, a trace naming a remote branch that does not exist, and
 an exit brief whose Current work row lacked the no-ROADMAP suffix.
+
+## Results that shaped v0.5 (2026-09-27)
+
+The git labs came first: `tests/multi-repo.sh` 37/37 and
+`tests/lifecycle.sh` 134/134, on every round below. A review round (22
+confirmed findings) then changed `repos.md` and four SKILL.md files
+within the line caps.
+
+Agent scenarios, Sonnet, one turn per message, each graded by the
+deterministic checks, the judge and a behaviour grader that reads the
+traces:
+
+- Round 1, ten scenarios: 5 of 10 passed (M2 parent plan, M6 consumer
+  stop in a frontend session, M12b seven repos, V9, V12). The failures
+  and their fixes: M1's go wrote no Repos section in backend and frontend
+  (setup is now due when that heading is missing, and the fixture now
+  commits the ticked steps' code); M3's land go skipped the consumer's
+  check (now always run, and rerun after Sync); M9's note skipped the
+  parent's `worktree list` (an agent miss; output right); M12a listed
+  several nested repos where the guard allowed one (it now joins them);
+  V1, a single repo, read `repos.md` (init now reads it only when step 1
+  or a record sends it there).
+- Round 2, the five failures plus M2: 4 of 6 passed (M3, M9, M12a, V1).
+  M1 force-added admin's `.worktrees/.gitignore` with `git add -f` after
+  git refused it (`scaffold.md` now says setup never adds that file); two
+  of its fails were the harness (`diff -` cannot read stdin in the
+  sandbox; the forbidden-flag check now also catches `add -f`). M2
+  claimed the user had named the land order when they had not (a parent
+  plan now takes it from the user's own words only, else an `(agent's
+  call)` Decisions line).
+- Round 3, M1, M2 and V1: 1 of 3 passed (V1). M1 left out the Repos
+  section in backend and frontend, which round 2 had set up: the agent
+  took init's step 2 table (setup only when the v0.4 heading is missing)
+  over `repos.md`'s terse "or no Repos heading". That table and the Setup
+  row now say it outright for a folder that holds repos. M2 met the skill
+  but failed the harness's own over-specified expectation (the Repo column
+  first); the expectation now accepts it in any position.
+- Round 4, M1, M2 and V1: M2 and V1 passed; M1 met every v0.5
+  expectation (Setup rows and one `chore: aegonex setup` per repo, the
+  Repos section alone in backend and frontend, the full setup in admin,
+  nothing in the parent) and failed only on `cd "<f>" && node --test`,
+  as in round 1. That is a v0.4 limit, not a v0.5 one: in a harness whose
+  shell goes back to its folder on every call, `cd "<f>"` and the command
+  as two calls cannot work, so the agent chains them. Left for later (see
+  the v0.5 spec's Risks). Also left: the harness's chain check missed that
+  line (it strips any leading `cd "..." && `); a leader ticked a ROADMAP
+  step during init's go.
+
+Latest state of each scenario: M2, M3, M6, M9, M12a, M12b, V1, V9 and
+V12 passed on their last run; M1 passed everything but the chained `cd`.

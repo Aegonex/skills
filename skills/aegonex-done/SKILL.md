@@ -4,7 +4,7 @@ description: Use when the user wants a milestone or a task closed, merged and cl
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.1"
+  version: "0.5.0"
 ---
 
 # aegonex-done
@@ -51,11 +51,12 @@ Step 1 runs whole and first on every call, a go or a message that a pull request
 included: its commands and stop lines run again; nothing is carried over from an earlier turn.
 
 ```bash
-git -C "<current folder>" worktree list --porcelain   # first worktree path: <main>, branch lines: open units
+git -C "<here>" worktree list --porcelain   # first worktree path: <main>, branch lines: open units
 date +%F                             # today, for `closed <date>` (PowerShell: Get-Date -Format yyyy-MM-dd)
 ```
 
-`<Base>` and `<remote>` are the `Base:` and `Remote:` values in `<main>`'s
+`<here>` is the folder the session opened in (removed since: the shell's folder); `not a git repository` there: read `../aegonex-init/references/repos.md`
+and follow it. `<Base>` and `<remote>` are the `Base:` and `Remote:` values in `<main>`'s
 `AGENTS.md`. The unit `<u>` is the one the user named, else the one your
 folder is on, else the only open unit; with several, one question names
 them. `<f>` is the folder whose `branch` line is `refs/heads/aegonex/<u>`.
@@ -90,6 +91,9 @@ cannot-close brief, no count, one row `Uncommitted | <files>` / `ยังไม
 `Reply **go** to commit them, or tell me what to do instead.` / `พิมพ์ **go** เพื่อ commit หรือบอกว่าอยากทำอะไรแทน`.
 Its go runs `git -C "<f>" add -- <files>` and `git -C "<f>" commit -m "wip: <u> before close" -- <files>`,
 then this skill again. The checks prove exactly what lands.
+With `## Repos (aegonex 0.5)` in `<main>`'s AGENTS.md, routes 3 and 4 also stop while the unit's ROADMAP line has `after: <r> <v>` or a
+`t-<slug> after: <r> <v>` line names it (found as step 3 finds `done when:`) and the landed check of `../aegonex-init/references/repos.md`
+fails: `<u> lands after <r> <v>, not landed yet: run aegonex-done for <r> <v> first` / `<u> ต้อง land หลัง <r> <v> ซึ่งยังไม่ land: เรียก aegonex-done ของ <r> <v> ก่อน`.
 
 ### 2. Sync with Base
 
@@ -316,8 +320,9 @@ Otherwise the go runs, one command per line:
       `git -C "<main>" log --format=%s <remote>/<Base>..<Base>` prints one
       or more lines, all `chore: aegonex setup`, and
       `git -C "<main>" grep -q -F "## Working mode (aegonex 0.4)" <remote>/<Base> -- AGENTS.md`
-      exits 0 (the setup is online); else stop, `<main> has commits that
-      are not online: <subjects>`.
+      exits 0 (the setup is online), and the same for `## Repos (aegonex 0.5)` when `<main>`'s AGENTS.md has it;
+      that one alone not online: go on to 3, with `-D` in 4 (the next unit opened from `<Base>` carries it); else
+      stop, `<main> has commits that are not online: <subjects>`.
    3. `git -C "<main>" worktree remove "<f>"`. It refuses modified or
       untracked files; never add `--force`. A remove that fails part-way
       (a Windows file lock): `git -C "<main>" worktree prune`, and ask the

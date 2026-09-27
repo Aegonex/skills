@@ -105,6 +105,542 @@ context window fills up.
 11. A closed milestone leaves one lesson behind: done proposes turning a
     dead end into a rule in AGENTS.md, in the same commit.
 
+## v0.5 spec (2026-09-27): a project made of several repos
+
+Why: v0.4 is written for one git repo. The owner's projects are mostly a
+plain parent folder holding 3-5 repos (`~/Code/shop/` with `backend/`,
+`frontend/`, ...), and most features change backend and frontend. Opened in
+that folder, every skill's first command (`git -C "<here>" worktree list
+--porcelain`) fails and no skill says what to do next, so an agent may
+improvise `git init` in the parent and wrap the child repos. Nothing opens
+the matching unit in a sibling repo, orders the landings (an API before its
+caller), or handles one repo landed while another waits for a pull request.
+
+The owner's answers (2026-09-27), binding:
+1. Sessions open mostly in the parent folder (not a repo), sometimes inside
+   one repo, lately sometimes one session per repo in parallel.
+2. Each repo keeps its own plan (its own ROADMAP.md and HANDOFF.md), so
+   agents can work on repos in parallel.
+3. A feature often changes several repos (most touch backend and frontend).
+4. 3-5 repos per project.
+
+R1-R3 and the other v0.4 requirements hold per repo, unchanged. Scope
+stays small: every stop state is an ordinary v0.4 state in each repo plus
+one small record that git can check, so any later session, in the parent
+or in one repo, resumes it. There is no parent file, no progress file, no
+lock and no feature id.
+
+How it was made: three designs (minimal change, parallel first,
+correctness first), three judges. Two picked the correctness design, the
+base, which was cut down with the minimal design's pieces and checked over
+12 cases. Where the judges disagreed, the reason stands beside the choice.
+
+### Names
+
+| Thing | Name |
+|---|---|
+| parent folder | `<P>`: the folder the session opened in (the harness's working folder, else the first `pwd`), held for the whole session, never the shell's folder after a `cd`; not a repo |
+| repo of the project | `<r>`: a direct child folder of `<P>` for which `git -C "<P>/<r>" rev-parse --show-prefix --git-dir` prints an empty line, then `.git` (a subfolder of a repo prints its prefix, a linked worktree an absolute git dir; a plain folder exits 128) |
+| sibling path | `<P>/<r>`; from inside one repo, `<main>/../<r>`, whichever folder of the repo the session is in (the Repos section's `<main>/../<repo>`) |
+| cross-repo task | the same `t-<slug>` in every repo it changes (`-2` where an old pull request holds the name; the record names the real unit) |
+| milestone pair | each repo's own next `m<n>` (backend `m3`, frontend `m5`), joined by a record |
+| record | `after: <r> <v>`, `<v>` = `m<k>` or `t-<slug>`, lowercase like the unit ids; several: `after: backend m3, auth t-token`; `after:` stays English like `done when:` |
+| provider / consumer | the unit a record names / the unit that holds the record |
+| landed | task `t-<s>`: `aegonex/t-<s>` is gone in `<P>/<r>`; milestone `m<k>`: `aegonex/m<k>` is gone there and ROADMAP.md on its `<remote>/<Base>` holds `- [x] M<k> — <name> · closed <date>` |
+| land order | a unit after every unit its record names; otherwise folder-name order |
+| Repos section | `## Repos (aegonex 0.5)`: the 7 lines of `assets/AGENTS-repos.md`, appended to AGENTS.md only in the repos of a multi-repo project |
+
+### Rules (added to v0.4's 1-6)
+
+7. Nothing is ever written in `<P>`: no `git init`, `clone`, file, folder or
+   `.worktrees`. Only the error `not a git repository` enters parent mode;
+   any other error (`dubious ownership`, ...) is quoted and stops.
+8. Each repo is a v0.4 project: its own Base and Remote, `## Commands`,
+   `.worktrees/`, state folder and Rules 1-6 (Rule 6 per repo).
+9. A record lives only in the consumer, only in a repo with the Repos
+   section, and only a session opened in `<P>` writes it: that session has
+   read both repos and set up the section, while plan and note stay v0.4
+   inside one repo. The provider carries nothing about its consumers.
+10. A consumer lands (the task land question, `aegonex-done`, exit's push
+    what I have) only after the landed check passes. From `<P>`, a
+    cross-repo task lands on one go, providers first; the first repo that
+    does not finish Clean up stops the rest. Milestones close one unit per
+    `aegonex-done` run.
+11. A sibling is only read: the landed-check commands and its AGENTS.md.
+    Nothing there is fetched, switched, opened or committed.
+12. One session per repo at a time; a parent session holds each repo it
+    opens a unit in. A `worktree add` refusal (`already exists`, `already
+    checked out`) means another session holds the unit: quote it and stop,
+    never retry under another name. In a repo with the Repos section a
+    milestone number, once written, never changes.
+
+### Layout
+
+```
+~/Code/shop/                        <P>: not a repo; aegonex writes nothing here, ever
+  backend/                          repo; its <main> stays on its own Base
+    AGENTS.md                       the v0.4 sections (43 lines, unchanged) + the Repos section (7 lines)
+    CLAUDE.md, .worktrees/.gitignore unchanged
+    .worktrees/m3/                  aegonex/m3: backend's ROADMAP.md, HANDOFF.md (its state folder)
+    .worktrees/t-discount/          half of a cross-repo task
+    .worktrees/t-discount--p1/      a part folder of it, under backend's <main>
+  frontend/
+    AGENTS.md, CLAUDE.md, .worktrees/.gitignore   as backend
+    .worktrees/m5/ROADMAP.md        `- [ ] M5 — cart page · after: backend m3 · done when: <observable>`
+    .worktrees/m5/HANDOFF.md        may hold `t-discount after: backend t-discount`
+    .worktrees/t-discount/
+  admin/                            a repo not set up yet: set up on the next parent init's go
+  docs/, notes.txt                  not repos: skipped
+```
+
+- Worktrees and part folders stay inside their repo, never in `<P>`.
+  Install and test lines come from each repo's own `## Commands`, and a
+  harness-made worktree is adopted per repo, as in v0.4.
+- New in the skills repo: `aegonex-init/references/repos.md` (the
+  procedure; the other skills cite it as `../aegonex-init/...`),
+  `aegonex-init/assets/AGENTS-repos.md` (the Repos section),
+  `tests/fixtures/make-multi-fixture.sh` and `tests/multi-repo.sh`.
+
+### The three session modes
+
+(a) Opened in the parent folder (the usual case). Every skill's first
+command, its v0.4 `worktree list` on `<here>` (the folder the session
+opened in), fails there with `not a git repository`; the skill's pointer
+sends it to `repos.md`, whose section for that skill replaces the step.
+- Find the repos (section 1): `ls -pL "<P>"` (PowerShell `Get-ChildItem
+  -Directory -Name -LiteralPath "<P>"`, cmd `dir /b /ad "<P>"`), then one
+  `git -C "<P>/<d>" rev-parse --show-prefix --git-dir` per folder not
+  starting with `.`. An empty line, then `.git`: a repo; exit 128 (a
+  subfolder or a linked worktree of a repo prints something else): skipped; another fatal error: a row `<d>: not read: <first error
+  line>`. No other git command names `<P>`. No repo: the whole reply is
+  `<P> is not a git repo and holds none: create or clone one yourself, then
+  run aegonex-init in it`; more than 6: `<P> holds <n> repos; open the
+  session in one of them`. Both write nothing.
+- Each repo is a v0.4 project with `<main>` = `<P>/<r>`; each skill runs
+  its steps per repo, rows and reply lines led by `<r>: `, paths written
+  `<r>/.worktrees/<u>`. After every `cd` (an install, a test, Clean up's
+  `cd "<main>"`), `cd "<P>"` on its own call; git stays `git -C`.
+- init (section 5) glances at each repo (`worktree list`, `branch
+  --show-current` and status of `<main>`, its AGENTS.md and ROADMAP.md),
+  with v0.4 steps 1-4 in full only for a repo with a unit folder, a main
+  folder not clean or off its Base, or the first step's repo. The brief
+  (`**shop · 3 repos**`, at most 25 lines) has a row per repo, its Current
+  work plus ` · lands after <r2> <v>` while its record has not landed,
+  then the Setup, Will move and Read by mistake rows. The first step is
+  init's rules 1-7 over every repo, the lowest rule first, a tie by land
+  order, rule 7 (`run aegonex-plan`) once; a consumer waiting on its
+  record reads rule 6 as `when <r2> <v> has landed, run aegonex-done (a
+  task may start meanwhile)`. A focus spanning repos is a cross-repo task.
+  One question; a Base or Remote to ask names its repo, and only the first
+  such repo asks.
+- init's go sets up every ready repo: where setup is due (v0.4 setup plus
+  the Repos section, or the section alone), the main folder is clean and on
+  its Base (or will be after the move) and no question is needed, one
+  `chore: aegonex setup` commit each, named in a Setup row. A repo left
+  unset would stop every parent plan that touches it, and the section
+  carries the land gate a repo session needs. Move, update and open run
+  only in the first step's repos, in land order. The reply: `**Opened:**
+  backend/.worktrees/t-discount, frontend/.worktrees/t-discount`, then one
+  line of clauses led by `<r>: `.
+- note (section 8) writes a line in each repo the fact concerns: `Noted
+  (<kind>) in backend, frontend: <text>`. exit (section 9) runs its steps
+  1-8 for each repo the session worked in, with one brief and a commit per
+  repo (`backend a1b2c3d · frontend e4f5a6b`). Its push what I have goes
+  in land order with the landed check run before the brief, so a consumer
+  not landed reads `committed, not pushed: lands after <r> <v>`; a
+  provider task that a sibling's record names is kept, never offered for
+  Remove. plan and done: below.
+
+(b) Opened inside one repo: `worktree list` succeeds, so this is v0.4,
+plus what the Repos section and a record on the unit in play add: init's
+`Lands after` row, done's one-line stop for routes 3 and 4, the task land
+question stopped by the Repos section (`Not yet: stop, name it`) and
+exit's push what I have stopped by its step 9. The check reads the sibling
+at `<main>/../<r>` with at most two git reads and its AGENTS.md. Work that also
+needs a sibling (the agent's call) opens nothing: the Repos section sends
+it to the parent folder, which opens and links both halves. A repo session
+writes no record. A repo never set up from `<P>` has no Repos section and
+stays v0.4, so its half can land first.
+
+(c) One session per repo, in parallel: each is (b) and writes only its own
+repo. The record sits in the consumer; the provider's session never needs
+it and lands when its checks pass, while the consumer's done waits for the
+check. Usual flow: plan the feature once from `<P>`, then open one session
+per repo. A feature started straight in two repo sessions meets the
+sibling rule in the consumer's session, so no half lands unlinked.
+
+### A feature across repos
+
+The provider lands first: the repo whose API the others call (for a
+removal, the caller). That is the agent's call, a Decision marked
+`(agent's call)` (a task: its Note), shown in the plan brief and the land
+question; the user may change it.
+
+A cross-repo task (section 7) opens on init's go or when the leader starts
+it, in each repo in land order, with that repo's **Open**; a repo without
+the Repos section stops it first: `<r>: run aegonex-init <r> first`. note
+then writes each repo's `t-<slug> done when:` and each consumer's record.
+A parent request is one ROADMAP step or one cross-repo task, as
+`repos.md` says. A part never spans repos: each repo is at least one part,
+2-5 parts in all, dispatched at once in `<P>/<r>/.worktrees/<u>--p<k>`.
+Review lines lead with the repo (`frontend p1: PASS: ...`), and a PASS
+integrates into that repo's `aegonex/<u>`.
+
+Landing it is the one chained go. When every repo's last part is
+integrated, a unit folder whose status lists HANDOFF.md ends the report
+with `run aegonex-exit first: HANDOFF.md in <r>/.worktrees/<u> has notes
+not saved` (the v0.4.1 rule); else one land question in land order:
+`Land? backend, then frontend: push aegonex/t-discount to main, remove
+backend/.worktrees/t-discount, frontend/.worktrees/t-discount and their
+aegonex/t-discount: Not yet / go`. The go, per repo in order: the landed
+check, always run (a provider cleaned up earlier on this go passes);
+**Sync** as `aegonex-done` step 2 says, so a unit opened before the
+Repos-section commit carries it and a moved Base is merged; the check
+again, since Sync may bring a record in; **Land**; **Clean up**;
+`cd "<P>"`. A repo that does not finish Clean up stops the repos after it,
+which stay as they were. The reply is a line per repo in the v0.4 form,
+led by the repo, then `Next:`. Asked to, the leader lands alone the repos
+whose parts are all integrated; a consumer among them still needs its
+check.
+
+A milestone pair closes with `aegonex-done`, one unit per run, v0.4
+unchanged per repo, so every stop stays a plain v0.4 state (section 10).
+The consumer's done stops at step 1 (routes 3 and 4) until the provider
+has landed; after the provider's Clean up, the `Next` row names the
+consumer's next step (`aegonex-done for frontend m5`). Routes 1 and 2
+(merged, waiting) are never blocked. A unit name that several repos share
+picks the first in land order whose records have landed, else one question
+naming `<r> <u>`.
+
+Partial failure: every stop leaves each repo in a v0.4 state plus the
+consumer's record, so init or done, from `<P>` or either repo, resumes it.
+
+| Case | This go | The next call |
+|---|---|---|
+| task go, provider refused as protected | provider: branch pushed, pull request, folder kept; consumer untouched (`frontend: not landed: lands after backend t-discount`) | provider's done step 8 on "merged" (a task has no close commit, so v0.4 asks Remove / Keep), then `Next` names the consumer's land |
+| task go, provider Sync stop, `[rejected]`, a key or an error | v0.4 stop line for the provider; consumer untouched | the land question again, after the named fix |
+| task go, provider landed, its Clean up refused | its files named; its branch stays, so the consumer does not start | `aegonex-done` for the provider (route 4), then the consumer's land |
+| task go, consumer refused after the provider landed | provider landed and removed; consumer takes v0.4's pull-request or `[rejected]` route | v0.4 |
+| milestone, provider went to a pull request | provider's folder kept (v0.4) | consumer's done stops until the provider's step 8 removes `aegonex/m<k>` |
+| provider landed unfinished by exit, Keep | its branch stays: not landed | consumer waits |
+| the session dies mid-go | each repo in a v0.4 state | init shows it, done resumes it; no progress file |
+| a record names a missing repo, or two units wait on each other | `<u>: after: <r> <v> cannot be checked: <reason>` | fixed by hand or through a parent plan |
+
+Clean up stays per repo, never waiting for another; `<P>` needs none.
+
+### Plans and the link
+
+The record (section 2) sits only in the consumer:
+- a milestone's on its ROADMAP.md line, before `done when:` (a check, so
+  nothing follows it): `- [ ] M5 — cart page · after: backend m3 · done
+  when: ...`, written by a parent plan in its `docs: plan M<n>` commit and
+  retired by done's collapse;
+- a task's as its own HANDOFF.md line `t-<slug> after: <r> <v>`, not a
+  suffix on `t-<slug> done when:`, which done step 3 runs as a command. A
+  parent note writes it while the provider's branch exists; exit carries
+  it as a Note like the done-when line.
+
+Never a cycle. In a repo with the Repos section, milestone numbers never
+change once written (v0.4 plan may restructure unticked milestones, which
+would break a sibling's record).
+
+The landed check (section 3; read only, one command per call; `<S>` =
+`<P>/<r>`, where a session inside one repo takes `<P>` as the folder
+holding `<main>`):
+
+```
+git -C "<S>" rev-parse --verify -q refs/heads/aegonex/<v>      # prints a sha: not landed; for a task, no sha is landed
+git -C "<S>" grep -q -E "^- \[x\] M<k> .* closed [0-9]{4}-[0-9]{2}-[0-9]{2}" <SB> -- ROADMAP.md   # m<k>: exit 0 = landed
+```
+
+`<SB>` is `<remote>/<Base>` from `<S>/AGENTS.md` (no remote: `<Base>`).
+The pattern is ASCII (a PowerShell code page cannot break it), anchored
+at the start only, so a line saved with CRLF still matches, and `M3 `
+never matches `M30`. No fetch is needed: a unit branch goes only
+in the provider's own Clean up, after its push or step 8's fetch updated
+that ref. A task counts as landed once its branch is gone, since only
+Clean up removes one, and its record is written only while the branch
+exists. A milestone needs both facts, so a hand-edited `[x]` line does not
+pass. No `<S>`, a git error or a cycle: stop, `<u>: after: <r> <v> cannot
+be checked: <reason>`. Callers rerun it after Sync, which may bring a
+record in, before **Land**.
+
+No two sessions write the same file: state files are written only in a
+repo's open milestone folder, by the one session working there; records
+sit in the consumer; siblings are only read; git's `worktree add` stops a
+second session opening the same unit.
+
+Plan in the parent (section 6): the repos and the land order come from the
+user's words, else the agent's call. It stops, a line per repo and nothing
+written, on a touched repo's plan stop, a touched repo without the Repos
+section, a cycle, or an open folder whose status lists ROADMAP.md (`<r>:
+ROADMAP.md in .worktrees/m<n> has changes not committed; another session
+may be writing it`). One milestone per touched repo: an open, unticked one
+gets the feature as a later milestone line, else a new `m<n>`; each step
+belongs to one repo; at most 7 steps per milestone and 7 questions in all.
+The brief is plan's, with each ROADMAP.md named in the title, `Done when:`
+per repo, a `Repo` column and a `Lands after` row (`frontend M5 after
+backend M3`). The go commits `docs: plan M<n>` per repo in land order and
+replies in at most 3 lines.
+
+### Skill and AGENTS.md changes
+
+- All five skills: `version: "0.5.0"`; the `worktree list` line runs on
+  `<here>`, the folder the session opened in (was `<current folder>`;
+  removed since: the shell's folder), and
+  a pointer, a plain sentence at that step, says: `not a git repository`
+  there, read `../aegonex-init/references/repos.md` (init:
+  `references/repos.md`) and follow it.
+- Lines printed only in parent mode live in `repos.md`; lines a repo
+  session prints (init's `Lands after` row, done's stop, exit's step 9
+  gate) stay in the SKILL.md files.
+- `repos.md` opens with the calling skill's rules and "nothing is ever
+  written in `<P>`", then has 11 sections: 1 Find the repos, 2 Records,
+  3 The landed check, 4 Sessions, 5 Init in the parent, 6 Plan in the
+  parent, 7 Leader mode across repos, 8 Note, 9 Exit, 10 Done, 11 The
+  Repos section.
+- The Repos section is `assets/AGENTS-repos.md`, which setup appends when
+  its heading is missing, in the same `chore: aegonex setup` commit:
+
+```
+## Repos (aegonex 0.5)
+- **Parent:** the folder above holds the project's other repos and is never a repo: no `git init`, file or commit there.
+  Units, state files, commands and go stay per repo; one session per repo at a time; milestone numbers never change.
+  A session inside one repo changes only that repo; work that also needs another repo starts in the parent folder.
+- **After:** `after: <repo> <v>` on a unit's ROADMAP line, or `t-<slug> after: <repo> <v>` in HANDOFF.md (State files):
+  it lands only once `<main>/../<repo>` has no `aegonex/<v>` branch and, for `m<k>`, `<remote>/<Base>:ROADMAP.md` there has
+  `- [x] M<k> ... closed`. Not yet: stop, name it; git only reads there. The parent lands providers first; a refusal stops.
+```
+
+Measured: 22, 120, 116, 114, 119, 123, 123 bytes. It gives an agent
+without the skills, and a repo session after compaction, the rules that
+matter at landing (the task land question is an AGENTS.md procedure no
+skill wraps) and the sibling rule. `(State files)` points at the HANDOFF.md
+that the AGENTS.md bullet of that name picks, where a task record sits.
+
+`assets/AGENTS.md` does not change: its two sections stay 43 lines under
+`(aegonex 0.4)` headings, since init decides that setup is due from them
+and a `0.5` heading would re-run setup in every existing project. A repo
+of a multi-repo project carries 43 + 7 aegonex lines.
+
+Line budget (`wc -l`), raised by owner decision 1:
+
+| File | v0.4.1 | v0.5 | Added | Cap |
+|---|---|---|---|---|
+| init | 318 | 323 | 2 pointer, 2 nested-repo guard, 1 row | 323 |
+| plan | 224 | 225 | 1 pointer | 225 |
+| note | 136 | 137 | 1 pointer | 137 |
+| exit | 349 | 352 | 1 pointer, 2 in step 9 | 352 |
+| done | 373 | 378 | 1 pointer, 3 gated stop, 1 in 7.4.2 | 378 (largest-file limit 380 holds) |
+| total | 1,400 | 1,415 | 15 | 1,415 |
+| `references/repos.md` | new | 100 | | 100 |
+| `assets/AGENTS-repos.md` | new | 7 | | 7 lines, each at most 125 bytes |
+
+Every cap moves by what its file gains. Trimming 12 Quick reference,
+Common mistakes and Never rows that repeat procedure (total 1,403) was
+turned down: those rows help weaker models, and v0.4's fix rounds showed
+that compressed rule text loses rules. `scaffold.md` goes 90 to 89 (the
+`.worktrees/.gitignore` line, rewrapped); `pull-request.md` (56/70) does
+not change.
+
+### Unchanged for single-repo projects
+
+A session in a repo with no Repos section and no record behaves as v0.4.1:
+the same commands, reads, briefs, questions, go actions, replies and stop
+lines; `repos.md` is never read; no command reaches outside the repo.
+done's record check and the Repos half of 7.4.2 (only that heading not
+online: Clean up goes on with `-D`) are gated on the Repos heading. The one addition is init's nested-repo guard: one extra read when
+the main folder's status lists an untracked folder, and a stop when that
+folder is a repo root (Risk 11). `assets/AGENTS.md`, `assets/CLAUDE.md`,
+`assets/ROADMAP.md`, `assets/HANDOFF.md` and `pull-request.md` are
+byte-identical; `scaffold.md` only says outright that setup never adds
+`.worktrees/.gitignore` (it ignores itself; never `add -f`); `tests/lifecycle.sh` (134 checks
+since v0.4.1) does not change.
+
+### Left out of v0.5
+
+- Any file or state in `<P>` (AGENTS.md, a feature id, a lock, a progress
+  file); a record written from a repo session; a provider-side view of
+  who waits for it.
+- One go that closes a feature's milestones in several repos; a ROADMAP
+  step spanning repos; parallel milestone work from one parent session.
+- Fetching a sibling; testing the consumer against the provider's unit;
+  deploy order; detecting two sessions in one repo.
+- Repos deeper than one level, submodules, a monorepo with several test
+  lines, a parent inside an outer repo, more than 6 repos; closing the
+  task hole of Risk 1; moving uncommitted work between repos.
+
+### Risks
+
+1. A removed task branch counts as landed: a provider task landed
+   unfinished by exit and then removed in a repo session, or deleted by
+   hand, lets the consumer land against half an API. The parent exit never
+   offers Remove for a provider that a record names (decision 6).
+2. A task record lives in a HANDOFF line; an exit that drops it (the
+   60-line trim) removes the gate, as v0.4 can drop a done-when line.
+3. The v0.4 defect found while designing this (a task folder with unsaved
+   notes refuses Clean up after the push) is fixed by v0.4.1. Projects set
+   up with v0.4 keep the old Go bullet; the parent's chained land reads
+   each folder's status itself.
+4. A unit opened before the Repos-section commit lacks it: a task landed
+   from a repo session (v0.4's Land has no Sync) stops at Clean up's
+   `merge --ff-only`, and `aegonex-done` finishes it: 7.4.2 finds only the
+   Repos section not online, so Clean up goes on and deletes the branch
+   with `-D`; `<main>` keeps the commit and the next unit opened from
+   `<Base>` carries it. The chained land Syncs first.
+5. Two sessions in one repo can overwrite one HANDOFF.md or ROADMAP.md;
+   only the written rule and the uncommitted-ROADMAP stop protect it
+   (decision 8). Git refuses racing pushes and worktree adds.
+6. Shell drift: holding `<P>`, and `cd "<P>"` after each `cd`, are new
+   wording that weaker models may skip.
+7. Cost: a parent init is about 5 calls per quiet repo and 12-15 per busy
+   one; a 5-repo brief is near the 25-line limit.
+8. A breaking provider change landed first breaks the old consumer on
+   Base; the plan brief and the land question show the order (decision 4).
+9. A protected provider holds its consumers until a human merges; their
+   folders live longer and Base drifts more (Sync handles it).
+10. `repos.md` and the Repos section sit in aegonex-init; installing a
+    subset of the skills breaks the pointers.
+11. The nested-repo guard stops a project that keeps an untracked nested
+    clone at its top level; the line says why, and `.gitignore` fixes it.
+12. "Never `git init` in `<P>`" is a written rule (decision 5): an agent
+    that runs no aegonex skill sees it only in a repo's AGENTS.md, and the
+    guard catches a fresh `git init` on the next init, not a committed one.
+13. The sibling rule rests on the agent's judgement of "needs another
+    repo"; a half that looks self-contained can still land first unlinked.
+14. A shell that goes back to its start folder on every call (some
+    harnesses) cannot run v0.4's `cd "<f>"`, then the command, as two
+    calls; agents chain them with `&&` (scenario M1, rounds 1 and 4). A v0.4
+    rule; left for a later version.
+
+### Tests
+
+Fixture: `tests/fixtures/make-multi-fixture.sh <dir> [--protected <r>]
+[--repos <n>] [--ticked] [--no-milestones] [--no-repos-section]
+[--git-init-parent]` builds `<dir>/shop/`, a plain folder: backend and
+frontend set up with the v0.4 sections and the Repos section, backend with
+`m3` open (2 of 3 steps ticked; `--ticked`: all), frontend with `m5` open
+(every step ticked, `after: backend m3`), each ticked step's code committed
+in its unit folder (`node --test` passes in both), admin with one commit and no
+setup, and `docs/` and `notes.txt`. Bare remotes in `<dir>/remotes/` log
+each push to `<dir>/push-order.log`. `--no-milestones`: no unit folders;
+`--no-repos-section`: no Repos section; `--protected <r>`: `<r>`'s remote
+refuses pushes to main, its hook installed after the fixture's own pushes;
+`--repos <n>`: extra plain repos up to `<n>`; `--git-init-parent`: shop
+itself is `git init`-ed.
+
+Lab: `tests/multi-repo.sh`, where every git line is a command of
+`repos.md` or of the v0.4 recipes it runs per repo. 37 checks in eight
+groups, all passing: finding the repos (6: the parent's `worktree list`
+fails; plain folders, linked worktrees and subfolders are not repos); the
+landed check (8: closed, pushed, cleaned up; `M3` against `M30`; a task
+with no branch); a squash-merged pull request (3); a cross-repo task whose
+provider push is refused, then the push order, backend before frontend
+(6); the Repos-section commit and done 7.4.2 (5: a unit opened before it
+stops at `merge --ff-only`, the unpushed section is not reset away and
+Clean up goes on with `-D`; the next unit carries the commit and lands
+it); the nested-repo guard (2); a noted HANDOFF.md, committed by exit,
+then landed (2); the review fixes (5: a CRLF closed line reads landed,
+`M3` still misses `M30` without `$`, a frontend session finds backend as
+`<main>/../backend`, and a record brought in by Sync stops the rerun
+check).
+
+Planned agent scenarios (Sonnet, one turn per message). Every turn
+snapshots each repo and asserts that `shop/.git` is absent; no trace holds
+`git init`, `clone`, `--force`, `reset --hard`, `stash` or `&&`.
+- M1 parent init "เริ่มงาน" (`--no-repos-section`): a row per repo,
+  frontend `land หลัง backend M3`, a Setup row naming admin (full setup)
+  and backend and frontend (the Repos section), first step backend M3
+  step 3; the go sets up every ready repo. M1b `--no-milestones`: `run aegonex-plan` once.
+- M2 parent plan of a coupon across backend and frontend: a Repo column, a
+  `land หลัง` row, the consumer's line with `after:`. M2b: an uncommitted
+  ROADMAP.md stops it.
+- M3 cross-repo task: parts dispatched at once, the record in frontend,
+  the land question backend first, push order backend then frontend. M3b:
+  the exit-first line. M3c: backend landed alone.
+- M4 M3, and M5 the milestone pair (`--ticked`), with `--protected
+  backend`: backend's pull request holds frontend until step 8.
+- M6 a frontend session closing M5 while backend m3 is open: the stop line
+  and at most two git reads of backend. M6b: the sibling rule. M7 a task
+  land in a frontend session, stopped by the Repos section.
+- M8 parent exit across both repos, also with the shell left in a unit
+  folder and with push what I have. M9 parent note to one repo and to both.
+- M10 a parent plan and a frontend session racing for one `m<n>`. M11
+  parallel sessions in backend and frontend. M12 the stops: `--repos 7`,
+  no repo, a missing repo, a cycle, `--git-init-parent`.
+- M13 single-repo regression: V1-V11 unchanged, `repos.md` never read.
+
+The judge gains multi-repo variants of `init-go` and `after-go`; the
+parent brief keeps the 25-line limit.
+
+### Owner decisions (2026-09-27)
+
+All 11 accepted as recommended:
+1. Raise the caps: SKILL.md total 1,415 (init 323, plan 225, note 137,
+   exit 352, done 378); `repos.md` at most 100 lines; the Repos section 7
+   lines.
+2. A feature's milestones close one repo per `aegonex-done` run, provider
+   first; the `Next` row names the other.
+3. `after:` records are written only by a session opened in the parent
+   folder.
+4. The land order is the agent's call, shown in the brief as a Decision,
+   which the user may change.
+5. Nothing is ever written in the parent folder.
+6. A task counts as landed once its branch is gone; the hole of a provider
+   task pushed unfinished and removed from a repo session is accepted for
+   v0.5.
+7. Parallel work on a feature's milestones means one session per repo; the
+   parent session does one step at a time (a cross-repo task still runs its
+   repos' parts at once).
+8. The one-session-per-repo rule is written only, no lock file.
+9. The parent init's go sets up every ready repo (clean main folder on its
+   Base, no question needed), not only the first step's.
+10. The v0.4 defect found while designing this was fixed first, as v0.4.1
+    (the exit-first rule, below).
+11. A session inside one repo sends work that also needs another repo to
+    the parent folder.
+
+### Implementation (2026-09-27)
+
+- The procedure lives in one reference file,
+  `skills/aegonex-init/references/repos.md` (100 lines, sections 1-11).
+  Every skill points to it with one line when its `worktree list` fails
+  with `not a git repository` (init's takes two, with "never `git init` or
+  write anything in `<here>`"); single-repo projects never read it.
+- The Repos section is its own asset file, `assets/AGENTS-repos.md`, that
+  setup appends; `repos.md` section 11 says so in one line. This changes
+  the draft, which kept that text inside `repos.md`.
+- Line counts and what each skill gained:
+  - init 323: the pointer, the nested-repo guard, the `Lands after` row,
+    and "a folder that holds several git repos" in the description.
+  - plan 225: the pointer.
+  - note 137: the pointer; the red flag "one fact in one file".
+  - exit 352: the pointer, step 9's push gate, `after:` lines kept and
+    carried as Notes, and the one `ls` that `repos.md` names.
+  - done 378: the pointer, step 1's stop on a record not landed (gated on
+    the Repos heading), and the Repos heading in 7.4.2's online test: when
+    it alone is not online, Clean up goes on with `-D`.
+  - total 1,415.
+- The v0.4 sections of `assets/AGENTS.md` are unchanged at 43 lines.
+- `tests/multi-repo.sh` passes 37 of 37 and `tests/lifecycle.sh` 134 of
+  134; the agent scenario results are in `docs/testing.md`.
+- A review round (22 confirmed findings) and the first scenario round
+  changed: `ls -pL`; the landed check without `$`, at `<main>/../<r>`
+  from a repo session, rerun after Sync and always run on the land go;
+  Setup rows for a missing Repos section; 7.4.2 going on with `-D`;
+  `<here>` falling back to the shell's folder once removed; plan keeping
+  every ` · after:` on a milestone line; exit never trimming a
+  `t-<slug> after:` line; single-repo init reading `repos.md` only when
+  step 1 or a record sends it there.
+- The second scenario round changed: a parent plan takes the land order
+  from the user's own words only, else writes it as an `(agent's call)`
+  Decisions line in each touched ROADMAP.md; setup never force-adds
+  `.worktrees/.gitignore`.
+- The third round changed: init's step 2 table and Setup row say that, in
+  a folder that holds repos, a missing `## Repos (aegonex 0.5)` heading
+  also makes setup due, of that section alone when the rest is there (a
+  repo set up with v0.4 gets only the section).
+
 ## v0.4.1 (2026-09-27): a task's notes are saved before it lands
 
 The defect, found in a scratch lab while designing v0.5: with no open
@@ -507,7 +1043,7 @@ in place.
 | note | 115 | 136 | clock read, names-kept secret rule checked with `git grep`, the not-closed milestone folder, `Not saved` when no folder is open; fix round 2: 120 characters by eye, the why shortened first; fix round 3: a why only when given, the kind's repeated words cut first |
 | exit | 302 | 348 | state folder, `-C` git facts (C26), carry and correct (C20), never ticks a milestone line (A1), `docs:` only for working documents (A3), `AIDEV-TODO(<unit>)` (C19), step 9 cites done's Sync, scan and push reading; HANDOFF in the reply's language, the waiting-milestone Current work row; fix round 2: every written line in the reply's language, a task's decisions and the waiting line as Notes, the plain-text unfinished-landing reply; fix round 3: the template read by its path, never `ls` or `find`, a why only when given, each Stopped at line's commit state, a command done-when ticked only on a run here |
 | done | 216 | 373 | unit resolution, closed/online, stop checks, Sync with the local-Base guard, task checks, tests once (C22), install first (D7), scan, Land, Clean up with Update, HANDOFF never deleted (A2); every check runs, `not run: <runner> missing`; the pull-request path in `references/pull-request.md` (56 lines, limit 70); fix round 2: distinct checks, facts read from files, a table of failures only, a reviewed first step on go, Clean up at once when merged; fix round 3: step 1 first on a go too, the retro rule in `<f>/AGENTS.md` and nothing written in `<main>`, every check again after the reviewed fix under a `Fixed:` or `FAIL:` line, the two-line after-go reply with `Next:`; fix round 4: every check anew after the fix's commit |
-| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters (v0.4.1: exit 349, total 1,400, sections 43 lines) |
+| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters (v0.4.1: exit 349, total 1,400, sections 43 lines) (v0.5: init 323, plan 225, note 137, exit 352, done 378, total 1,415; repos.md 100; Repos section 7 lines) |
 
 Duplication: 23 single lines appear in two or more skills, all of them
 frontmatter keys, section headings, table header and template rows, the

@@ -6,6 +6,7 @@ Claude Code, Codex CLI, Cursor, OpenCode and GitHub Copilot CLI.
 
 This repository contains instructions and empty templates only. Project state
 (ROADMAP.md, HANDOFF.md) lives in each project's own repository, never here.
+A folder that holds several repos works too; each repo keeps its own plan.
 
 ## Install
 

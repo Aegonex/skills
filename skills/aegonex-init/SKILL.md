@@ -1,10 +1,10 @@
 ---
 name: aegonex-init
-description: Use when a work session starts on a project — the first message of the day, "เริ่มงาน", "start work", "where were we", "ต่อจากที่ค้างไว้", "continue from yesterday", "boot" — or when opening a project that has no AGENTS.md, ROADMAP.md or HANDOFF.md yet. Also use when a session resumes after context was compacted or the user mentions a handoff.
+description: Use when a work session starts on a project — the first message of the day, "เริ่มงาน", "start work", "where were we", "ต่อจากที่ค้างไว้", "continue from yesterday", "boot" — or when opening a project that has no AGENTS.md, ROADMAP.md or HANDOFF.md yet, or a folder that holds several git repos. Also use when a session resumes after context was compacted or the user mentions a handoff.
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.1"
+  version: "0.5.0"
 ---
 
 # aegonex-init
@@ -56,7 +56,7 @@ language: translate the English); paths, commit subjects and quoted notes stay a
 Run the steps in order and without commentary: the brief is the whole reply.
 Before go the procedure reads only: the four state files, manifests
 (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml` and the like),
-`README.md`, `CONTRIBUTING.md`, and this skill's own files. A `diff` of a
+`README.md`, `CONTRIBUTING.md`, and this skill's own files (`references/repos.md` only when step 1 or a record sends you there). A `diff` of a
 file that a `status` listed is git output and is allowed; opening `src/…`
 or any other code file is not. Every command, `pwd` and `ls` included, is its
 own tool call on one line, with no `&&`, `||` or `;`; an exit code comes from
@@ -68,13 +68,17 @@ below), so its paths can be given back to git.
 ### 1. Git facts
 
 ```bash
-git -C "<here>" worktree list --porcelain  # <here>: absolute path of the folder you are in. First worktree path: <main>. The rest: unit folders
+git -C "<here>" worktree list --porcelain  # <here>: absolute path of the folder the session opened in (removed since: the shell's folder). First worktree path: <main>. The rest: unit folders
 git -C "<main>" branch --show-current
 git -C "<main>" -c core.quotePath=false status --short   # changes in the main folder
 git -C "<main>" branch --list "aegonex/*"
 ```
 
 Run each line as written, even where the shell already stands; never `cd`.
+When the first line fails with `not a git repository`, `<here>` may hold several repos: read `references/repos.md`
+and follow it; never `git init` or write anything in `<here>`. Another error on that line: quote it and stop.
+When `<main>`'s status lists `?? <d>/` and `git -C "<main>/<d>" rev-parse --show-prefix --git-dir` prints an empty line,
+then `.git`, the whole reply is `<main> holds the git repo <d>: not set up` / `<main> ครอบ git repo <d> ไว้: ไม่ตั้งค่า` (several: each `<d>`, joined by `, `).
 A `branch refs/heads/aegonex/<u>` line (not `--p<k>`) marks an open unit `<u>`
 and its folder `<f>`; for each: its status, `git -C "<f>" log --oneline -5` and
 `git -C "<f>" log -1 --first-parent --no-merges --format=%s`:
@@ -95,7 +99,7 @@ folder, closed or not, else the state folder; `HANDOFF.md` in the state folder.
 
 | File | Missing | Present |
 |---|---|---|
-| `AGENTS.md` | setup: derive its content now (`references/scaffold.md`), name it in `Missing files`, write it after go | read it; no `## Working mode (aegonex 0.4)` heading means setup, with the sections named in `Missing files` |
+| `AGENTS.md` | setup: derive its content now (`references/scaffold.md`), name it in `Missing files`, write it after go | read it; no `## Working mode (aegonex 0.4)` heading means setup, with the sections named in `Missing files`; in a folder that holds repos (`references/repos.md`), no `## Repos (aegonex 0.5)` heading also means setup, of that section alone when the rest is there |
 | `CLAUDE.md` | setup, as `AGENTS.md` | no `@AGENTS.md` line means setup |
 | `ROADMAP.md` | name it in the `Missing files` row: `aegonex-plan` creates it | read it: the current milestone is the open `m<n>` that is not closed, else the first `- [ ] M…` line without `· closed`; count its `- [ ]`/`- [x]` steps (the `docs:` line is not a step) |
 | `HANDOFF.md` | name it in the `Missing files` row: `aegonex-exit` creates it when the session ends; drift checks that need it are skipped | read it |
@@ -152,6 +156,7 @@ Rows come in this order, each only when it has something to say: no row reads
 | Current work / งานปัจจุบัน | `<M> <name>: <done> of <total> steps done` / `<M> <name>: เสร็จ <done> จาก <total> ขั้น` | `ROADMAP.md` has a current milestone |
 | Work folder / โฟลเดอร์งาน | `.worktrees/<u>` of the first step, `new` / `ใหม่` when go opens it, `this folder` / `โฟลเดอร์นี้` when go adopts a harness folder | the first step works in a unit |
 | Other work / งานอื่นที่เปิดอยู่ | each other open unit: `<u>`, `<u>: waits for its pull request` / `<u>: รอ merge pull request` (closed and `<remote>/aegonex/<u>` exists), `<u>: closed, run aegonex-done` / `<u>: ปิดแล้ว เรียก aegonex-done`; each leftover: `<u>--p<k>: part left over` / `ส่วนงานค้าง`, `aegonex/<u>: no folder` / `ไม่มีโฟลเดอร์` | there are any |
+| Lands after / land หลัง | `<u> lands after <r> <v>, not landed yet` / `<u> land หลัง <r> <v> ซึ่งยังไม่ land` | the first step's unit has an `after:` record (its ROADMAP line, or a `t-<slug> after:` line in HANDOFF.md) and the landed check of `references/repos.md` fails; that file also words the first step |
 | Last stopped at / ครั้งก่อนหยุดที่ | HANDOFF's Stopped at in a few words, its date in brackets | `HANDOFF.md` has a Stopped at |
 | Unfinished session / session ก่อนไม่ได้ปิด | `<n> notes left; aegonex-exit never ran` / `มีบันทึกค้าง <n> บรรทัด ไม่ได้ปิดด้วย aegonex-exit` | `## Session log` is present |
 | Branch mismatch / branch ไม่ตรง | `on <current>, handoff written on <branch>` / `ตอนนี้อยู่ <current> แต่ handoff เขียนไว้บน <branch>` | the branches differ |
@@ -160,7 +165,7 @@ Rows come in this order, each only when it has something to say: no row reads
 | TODO in code / TODO ในโค้ด | `<file:line> <text>`, at most 3 | a TODO sits in a file no other row names |
 | Handoff too long / handoff ยาวเกิน | `<n> lines, limit 60` | `HANDOFF.md` is over 60 lines |
 | Missing files / ไฟล์ที่ยังไม่มี | each missing state file and what makes it: `AGENTS.md`, `CLAUDE.md` or `the Working mode and Leader mode sections` / `ส่วน Working mode และ Leader mode` after go; `ROADMAP.md` by aegonex-plan; `HANDOFF.md` by aegonex-exit when the session ends | a state file or section is missing |
-| Setup / ตั้งค่า | `Base <Base> · Remote <remote or none>` / `Base <Base> · Remote <remote หรือ none>`, then each of `AGENTS.md`, `CLAUDE.md`, `.worktrees/.gitignore` and an existing `.dockerignore` that the go writes, and with no commit yet the top-level entries the setup commit takes (`references/scaffold.md`), even when `Missing files` names them; a value to be asked reads `?` and lists the local branches (or the remotes) | setup is due (step 2): `AGENTS.md` or `CLAUDE.md` missing, no `## Working mode (aegonex 0.4)` heading, or no `@AGENTS.md` line |
+| Setup / ตั้งค่า | `Base <Base> · Remote <remote or none>` / `Base <Base> · Remote <remote หรือ none>`, then each of `AGENTS.md`, `CLAUDE.md`, `.worktrees/.gitignore` and an existing `.dockerignore` that the go writes, and with no commit yet the top-level entries the setup commit takes (`references/scaffold.md`), even when `Missing files` names them; a value to be asked reads `?` and lists the local branches (or the remotes) | setup is due (step 2): `AGENTS.md` or `CLAUDE.md` missing, no `## Working mode (aegonex 0.4)` heading, or no `@AGENTS.md` line; in a folder that holds repos, also no `## Repos (aegonex 0.5)` heading |
 | Will move / จะย้าย | the main folder's changed files and `<b>` (the unit starts from it or merges it): `<files> and <b> into .worktrees/t-<slug>; <b> is kept` / `<files> และ <b> ไปที่ .worktrees/t-<slug>; ยังเก็บ <b> ไว้` (`<u>` in place of `t-<slug>` when `<b>` is `aegonex/<u>`); on `<Base>`: `<files> into .worktrees/<u>` / `<files> ไปที่ .worktrees/<u>`; detached: `<files> and <sha> into .worktrees/<u>` / `<files> และ <sha> ไปที่ .worktrees/<u>`; while Base reads `?`, `<b>` is the main folder's branch, and an answer naming it as Base moves the files alone into the step's unit | main folder not clean |
 | Read by mistake / อ่านเกินขอบเขต | `<file>: ignore its content` | the file check below found one |
 

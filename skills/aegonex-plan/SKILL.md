@@ -4,7 +4,7 @@ description: Use when a project needs its next milestone planned — there is no
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.4.1"
+  version: "0.5.0"
 ---
 
 # aegonex-plan
@@ -52,7 +52,8 @@ the English. `ROADMAP.md` content follows the same language; its headings do not
 Every command, reads included, is its own tool call on one line: no `&&`, `||` or `;`; an exit code
 comes from the tool result, never `; echo $?` or `|| true`. Every git command is `git -C "<absolute folder>"`,
 even when the shell or a harness prefix already stands in that folder; never `cd` to run one.
-`git -C "<current folder>" worktree list --porcelain`: its first `worktree ` path is `<main>`;
+`<here>` is the folder the session opened in (removed since: the shell's folder); `not a git repository` there: read `../aegonex-init/references/repos.md` and follow it.
+`git -C "<here>" worktree list --porcelain`: its first `worktree ` path is `<main>`;
 a `branch refs/heads/aegonex/m<n>` line marks the open milestone folder. Read `ROADMAP.md`
 and `HANDOFF.md` from that folder, else from `<main>`, plus `<main>`'s `AGENTS.md` and
 `git -C "<main>" log --oneline -20`; `date +%F` (PowerShell: `Get-Date -Format yyyy-MM-dd`)
@@ -118,7 +119,7 @@ the template, so `aegonex-init`, `aegonex-exit` and `aegonex-done` can parse the
 | Situation | Do |
 |---|---|
 | No `ROADMAP.md` | write the whole file: Goal, the milestone (M1), later milestones as one line each with a `done when` if known, Not doing, Decisions, Constraints |
-| `ROADMAP.md` exists | keep every ticked line, every existing Decisions line and every Constraints line byte for byte; restructure only unticked milestones and steps; never un-tick; add, never rewrite, decisions |
+| `ROADMAP.md` exists | keep every ticked line, every ` · after: <r> <v>` on a milestone line, every existing Decisions line and every Constraints line byte for byte; restructure only unticked milestones and steps; never un-tick; add, never rewrite, decisions |
 | A `docs:` line | keep it; add a path only for a document the user named |
 
 Step shape: `- [ ] <step> · done when: <command, test or behaviour>`.
