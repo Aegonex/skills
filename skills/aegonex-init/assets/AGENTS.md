@@ -37,11 +37,11 @@ Base: <base branch> · Remote: <remote name, or none>
   words, `a-z0-9-`), in its folder `<f>`, `<main>/.worktrees/<u>`, on branch `aegonex/<u>`. `<main>`, the first `worktree `
   path of `git -C "<folder>" worktree list --porcelain`, stays on Base; only aegonex setup writes there. A harness-made
   worktree, detached or on a branch outside `aegonex/*`, is adopted as `<f>`: `git -C "<f>" switch -c aegonex/<u> <Base>`.
-- **Commands:** one per tool call and line, reads too; no `&&` `||` `;`, `; echo $?` or `|| true` (exit code from the tool
-  result, no error shown = 0); all git as `git -C "<folder>"`, even when the shell is there, after a go too; absolute paths.
+- **Commands:** one per call and line, reads too, absolute paths; no `&&` `||` `;`, `; echo $?`, `|| true` (exit code: tool
+  result, no error = 0), but install, test, done-when, remove: `cd "<folder>" && <command>`; git: always `git -C "<folder>"`.
 - **Open** `<u>`: `git -C "<main>" worktree prune`; `git -C "<main>" worktree add "<f>" aegonex/<u>` (no such branch:
-  `git -C "<main>" worktree add -b aegonex/<u> "<f>" <Base>`); `<main>/.worktrees/.gitignore` needs `*`; `cd "<f>"`; the
-  install command (`none`: skip; fails: quote its first error line, go on; no retry, diagnosis, non-project command, `sudo`).
+  `git -C "<main>" worktree add -b aegonex/<u> "<f>" <Base>`); `*` in `<main>/.worktrees/.gitignore`; `cd "<f>" && <install>`
+  (`none`: skip; fails: quote its first error line, go on; no retry, diagnosis, non-project command, `sudo`).
 - **State files:** ROADMAP.md and HANDOFF.md change only in the open `m<n>` folder that is not closed (its last own commit is
   not `chore: close m<n>`). A task never edits ROADMAP.md, and HANDOFF.md only when no such folder is open.
 - **Go:** landing, pushing, a pull request or removing a unit folder or branch needs a go to a reply naming it; silence, a
@@ -53,8 +53,8 @@ Base: <base branch> · Remote: <remote name, or none>
   (no remote: `git -C "<main>" merge --ff-only aegonex/<u>`). Refused as protected: `git -C "<f>" push <remote> aegonex/<u>`
   (refused: stop, quote it); a pull request: `gh pr create` if the remote is a host URL (never guess a repo); keep `<f>`.
 - **Clean up** only if `git -C "<main>" merge-base --is-ancestor aegonex/<u> <remote>/<Base>` exits 0 (no remote: `<Base>`)
-  or aegonex-done step 8 finds it merged; `cd "<main>"`; `git -C "<main>" branch --show-current` prints `<Base>` (no-remote
-  Land too); `git -C "<main>" merge --ff-only <remote>/<Base>` (no remote: skip); `git -C "<main>" worktree remove "<f>"`;
+  or aegonex-done step 8 finds it merged; `git -C "<main>" branch --show-current` prints `<Base>` (no-remote Land too);
+  `git -C "<main>" merge --ff-only <remote>/<Base>` (none: skip); `cd "<main>" && git -C "<main>" worktree remove "<f>"`;
   `git -C "<main>" branch -d aegonex/<u>` (step 8: `-D`). Harness `<f>`: `git -C "<f>" switch --detach`, `branch -d` only.
 - **Never** `--force`, `--no-verify`, `reset --hard`, `stash`, `add -A`; never remove uncommitted work, your own included, or
   unpushed work, or delete an online branch; work outside the request is named in the reply, not undone.

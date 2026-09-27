@@ -4,7 +4,7 @@ description: Use when the user wants a milestone or a task closed, merged and cl
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.5.0"
+  version: "0.5.1"
 ---
 
 # aegonex-done
@@ -36,14 +36,14 @@ language. Command output is quoted as is.
 ## Procedure
 
 The steps run in order, without commentary: the brief is the whole reply.
-Every command, read-only ones included, is its own tool call on one line: no `&&`, `||` or `;`.
-Git is always `git -C "<absolute folder>" ...`, reads included, even when the shell or a harness
-prefix already stands there; never `cd` to run a read. Other commands run in the unit folder (the
-shell's working directory, or `cd "<f>"` on its own line). An exit code is read from the tool result
-(no error shown: 0), never with `; echo $?` or `|| true`. Status is read as
-`git -C "<f>" -c core.quotePath=false status --short`, so paths go back to git as printed. The
-first numbered step that fails ends the skill with the brief for a unit that cannot close; step 3
-always finishes.
+Every command, read-only ones included, is its own tool call on one line: no `&&`, `||` or `;`. Git is always
+`git -C "<absolute folder>" ...`, reads included, even when the shell or a harness prefix already stands there;
+never `cd` to run a read. A check, the tests and the install run in `<f>` as one chain, `cd "<f>" && <command>`,
+one call, even where the shell stands, since a shell may not keep a `cd` between calls (PowerShell 5.1 has no `&&`:
+`Set-Location "<f>"`, then the command); step 7.4's remove chains `cd "<main>"` the same way. An exit code is read
+from the tool result (no error shown: 0), never with `; echo $?` or `|| true`. Status is read as
+`git -C "<f>" -c core.quotePath=false status --short`, so paths go back to git as printed. The first numbered step
+that fails ends the skill with the brief for a unit that cannot close; step 3 always finishes.
 
 ### 1. Find the unit
 
@@ -130,7 +130,7 @@ in the `HANDOFF.md` of the open milestone folder or of `<f>`. A task with none:
 the first step is `name the check for t-<slug>`. Each distinct check runs once, in order, even
 after one fails; a command that several `done when` lines name runs and counts once (`<n>` and
 `<total>` below count distinct checks):
-- a command or a test: run it in `<f>`, never in watch mode, with the environment the handoff's
+- a command or a test: run it in `<f>` (`cd "<f>" && <command>`), never in watch mode, with the environment the handoff's
   Notes name; pass or fail by its exit code and output. A failure with no output: its reason is the
   condition the check's own script tests, read from that script, else `exit <code>, no output`;
 - a fact in a file (`recorded below`, meaning `ROADMAP.md`, or `documented in <file>`): read that
@@ -309,9 +309,7 @@ Otherwise the go runs, one command per line:
    - `[rejected]`: Base moved; the close stays; `Base moved: run aegonex-done
      again` / `Base ขยับแล้ว: เรียก aegonex-done อีกครั้ง`;
    - anything else: stop and quote its first `error:` or `fatal:` line.
-4. **Clean up**, in order, each refusal stopping it with the files named;
-   first `cd "<main>"` (PowerShell `Set-Location "<main>"`) on its own
-   line, so the shell does not hold the folder:
+4. **Clean up**, in order, each refusal stopping it with the files named:
    1. `git -C "<main>" merge-base --is-ancestor aegonex/<u> <remote>/<Base>`
       (no remote: `<Base>`) exits 0; step 8 replaces this check.
    2. **Update**: `git -C "<main>" branch --show-current` prints `<Base>`
@@ -323,10 +321,12 @@ Otherwise the go runs, one command per line:
       exits 0 (the setup is online), and the same for `## Repos (aegonex 0.5)` when `<main>`'s AGENTS.md has it;
       that one alone not online: go on to 3, with `-D` in 4 (the next unit opened from `<Base>` carries it); else
       stop, `<main> has commits that are not online: <subjects>`.
-   3. `git -C "<main>" worktree remove "<f>"`. It refuses modified or
-      untracked files; never add `--force`. A remove that fails part-way
-      (a Windows file lock): `git -C "<main>" worktree prune`, and ask the
-      user to delete the folder.
+   3. `cd "<main>" && git -C "<main>" worktree remove "<f>"`, one call, even
+      where the shell resets, so a shell that keeps its folder does not hold
+      `<f>` (PowerShell 5.1: `Set-Location "<main>"`, then the remove). It
+      refuses modified or untracked files; never add `--force`. A remove that
+      fails part-way (a Windows file lock): `git -C "<main>" worktree prune`,
+      and ask the user to delete the folder.
    4. `git -C "<main>" branch -d aegonex/<u>` (after step 8: `-D`). The
       online copy `<remote>/aegonex/<u>` is never deleted.
    In a folder your harness made: skip 2 and 3, run
@@ -365,7 +365,7 @@ online, the user has not said it is merged), and the compare and **Clean up** on
 - A delete-row path on neither the `docs:` line nor under `Scratch:`.
 - `--force`, `push --delete`, `reset --hard`, or `branch -D` without step 8's
   checks.
-- A git command without `-C "<folder>"`, or a command chained with `&&`, `||` or `;`, after the go too.
+- A git command without `-C "<folder>"`, a chain other than `cd "<f>" && <command>` or step 7.4's remove, or a check or a remove run on the call after a bare `cd`, after the go too.
 
 ## Quick reference
 

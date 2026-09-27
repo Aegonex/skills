@@ -13,8 +13,7 @@ No repo: the whole reply is `<P> is not a git repo and holds none: create or clo
 it` / `<P> ไม่ใช่ git repo และไม่มี repo ข้างใน: สร้างหรือ clone เอง แล้วเรียก aegonex-init ในนั้น`. More than 6: `<P> holds
 <n> repos; open the session in one of them` / `<P> มี <n> repo: เปิด session ใน repo ใด repo หนึ่ง`. Both write nothing.
 Each repo is a v0.4 project with `<main>` = `<P>/<r>`: its own Base, Remote, `## Commands`, `.worktrees/` and AGENTS.md
-rules; each skill runs its steps per repo. After every `cd` (an install, a test, Clean up's `cd "<main>"`), `cd "<P>"` on its
-own call. Brief rows and reply lines lead with `<r>: `; paths read `<r>/.worktrees/<u>`.
+rules; each skill runs its steps per repo. Brief rows and reply lines lead with `<r>: `; paths read `<r>/.worktrees/<u>`.
 ## 2. Records
 A task across repos keeps one `t-<slug>` in each (`-2` where an old pull request holds it; a record names each repo's own
 unit); a milestone is each repo's own next `m<n>`. The provider lands first: the repo whose API the others call (for a
@@ -76,7 +75,7 @@ aegonex-exit first: HANDOFF.md in <r>/.worktrees/<u>, ... has notes not saved`; 
 backend, then frontend: push aegonex/t-discount to main, remove backend/.worktrees/t-discount, frontend/.worktrees/t-discount
 and their aegonex/t-discount: Not yet / go` (Thai `ยังไม่ land`; each Base named when they differ). Its go, per repo in
 order: the landed check of the unit's records, always run (a provider cleaned up on this go passes it); Sync as
-`aegonex-done` step 2 says; **Land**; **Clean up**; `cd "<P>"`. A repo that does not finish Clean up (a stop, a pull request,
+`aegonex-done` step 2 says; **Land**; **Clean up**. A repo that does not finish Clean up (a stop, a pull request,
 a refusal) stops the ones after it, left as they are. Reply: a line per repo in the land go's form (landed, the pull request
 with the folder kept, the stop, or `not reached` / `ยังไม่ได้ทำ`), led by the repo, then `Next:`. Asked to, the leader lands
 alone the repos whose parts are all integrated: the question names only them; a consumer still needs its check.

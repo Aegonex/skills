@@ -4,7 +4,7 @@ description: Use when a work session is ending or must be handed off — "ปิ
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.5.0"
+  version: "0.5.1"
 ---
 
 # aegonex-exit
@@ -47,11 +47,11 @@ another language, translate the English.
 
 ## Procedure
 
-Run the steps in order and without commentary: the brief is the whole reply. Every command, reads
-included, is its own tool call on one line: no `&&`, `||` or `;`; an exit code is read from the
-tool result (no error shown = 0), never with `; echo $?` or `|| true`. Git is always
-`git -C "<folder>"` with an absolute path, even when the shell already stands in that folder or a
-harness prefix cd's there; never `cd` to run a read.
+Run the steps in order and without commentary: the brief is the whole reply. Every command, reads included, is
+its own tool call on one line: no `&&`, `||` or `;` (Remove's **Clean up** aside: its remove is one chain,
+`aegonex-done` step 7.4); an exit code is read from the tool result (no error shown = 0), never with
+`; echo $?` or `|| true`. Git is always `git -C "<folder>"` with an absolute path, even when the shell already
+stands in that folder or a harness prefix cd's there; never `cd` to run a read.
 
 ### 1. Git facts
 
@@ -324,7 +324,7 @@ the user's decision, asked in the closing question. Agents without this skill co
 - Writing HANDOFF.md in English because the old file was.
 - `npm install`, `npx`, `pytest`, `cargo test` or any runner in a command.
 - `ls` (but `repos.md`'s) or `find` (the skill folder too), `cat` or a file read of source, docs or README "for context".
-- A `cd` before a read, `&&` `||` `;` in a command, or git without `-C "<absolute folder>"`.
+- A `cd` before a read, `&&` `||` `;` in a command but **Clean up**'s remove, or git without `-C "<absolute folder>"`.
 
 ## Quick reference
 

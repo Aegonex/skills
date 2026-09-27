@@ -4,7 +4,7 @@ description: Use when a work session starts on a project — the first message o
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.5.0"
+  version: "0.5.1"
 ---
 
 # aegonex-init
@@ -62,8 +62,7 @@ or any other code file is not. Every command, `pwd` and `ls` included, is its
 own tool call on one line, with no `&&`, `||` or `;`; an exit code comes from
 the tool result (no error shown is 0), never `; echo $?` or `|| true`. Git is
 always `git -C "<absolute folder>" ...`, even where the shell already stands;
-never `cd` to run a read. Status always takes `-c core.quotePath=false` (as
-below), so its paths can be given back to git.
+never `cd` to run a read. Status always takes `-c core.quotePath=false` (as below), so its paths can be given back to git.
 
 ### 1. Git facts
 
@@ -254,8 +253,8 @@ go, ok, yes, ได้, โอเค, ลุย, and so is the answer to a Base 
 answer is a new focus: restate the first step in one sentence and proceed with
 it. A go missing a value replies with one line naming it and one question, and writes nothing.
 
-On go, in this order (each command its own tool call on one line, git as
-`git -C "<absolute folder>" ...` even where the shell already stands):
+On go, in this order (each command its own tool call on one line, git as `git -C "<absolute folder>" ...` even
+where the shell already stands; the install alone is one chain, `cd "<unit folder>" && <install command>`, one call):
 1. **move**, when `Will move` has rows: steps 1 to 5 of the recipe in
    `references/scaffold.md` (save, restore, switch to `<Base>`).
 2. **update**, when `Main folder behind` fired: **Update** as `aegonex-done`
@@ -291,6 +290,7 @@ Init never lands, pushes, opens a pull request, or removes a folder or branch.
 - "I'll create AGENTS.md now, it is only a template."
 - "The change is small, I'll make it in the main folder."
 - "The shell already stands in the folder, plain `git` is fine." Git is always `git -C "<folder>"`, after the go too.
+- "I'll `cd` into the unit folder, then run the install on the next call." A shell may not keep a `cd` between calls: `cd "<f>" && <install command>`, one call.
 - "I need to see the code to propose a good first step."
 
 The brief comes from testimony and git only: code read before go spends context on an unchosen task.

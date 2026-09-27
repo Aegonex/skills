@@ -1,7 +1,8 @@
 #!/bin/bash
 # v0.4 (small) lifecycle walk. Every git line below is a command of the spec with its placeholders filled in:
 # <main>=$M, <Base>=main, <remote>=origin, <u>, <unit folder>=$U, <part folder>=$P.
-# One command per line, no && chains inside a recipe (the && in ok() are the lab's assertions, not recipe text).
+# One command per line, no && chains inside a recipe but v0.5.1's `cd "<folder>" && <command>` for a done-when and Clean
+# up's remove, run in a subshell as a shell that does not keep a `cd` runs it (the other && are the lab's, not recipe text).
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd -P)
 # The run folder must exist and sit outside every git repo: with an empty RUN, `cd ""` stays put and
@@ -71,10 +72,9 @@ update_main() {                                                                 
   git -C "$M" reset -q --keep origin/main; }
 landed_() { git -C "$M" merge-base --is-ancestor "aegonex/$1" "${2:-origin/main}"; }       # Clean up precondition
 clean_() { f=$1; u=$2; flag=${3:--d}                                                       # Working mode **Clean up**
-  cd "$M"                                                                                  # the shell leaves the unit folder
   [ "$flag" = -D ] || landed_ "$u" || { echo "  stop: not landed"; return 1; }
   update_main || return 1
-  git -C "$M" worktree remove "$f" || return 1
+  (cd "$M" && git -C "$M" worktree remove "$f") || return 1                                # one call: the shell leaves the unit folder
   git -C "$M" branch "$flag" "aegonex/$u"; }
 pushed_check() { l=$(git -C "$M" rev-parse "aegonex/$1"); r=$(git -C "$M" rev-parse --verify -q "refs/remotes/origin/aegonex/$1") || { echo gone; return; }
   [ "$l" = "$r" ] && echo equal || echo different; }                                       # done step 8
@@ -124,7 +124,7 @@ ok "part folders are siblings under <main>/.worktrees" '[ -d "$M/.worktrees/m1--
 P1=$M/.worktrees/m1--p1; P2=$M/.worktrees/m1--p2
 printf 'b\n' > "$P1/b.js"; commit_ "$P1" "feat: b" b.js                                       # writers commit in their folders
 printf 'c\n' > "$P2/c.js"; commit_ "$P2" "feat: c" c.js
-ok "review p1: done-when runs in the part folder" '(cd "$P1"; test -f b.js)'
+ok "review p1: done-when runs in the part folder" '(cd "$P1" && test -f b.js)'
 ok "review p1: diff aegonex/m1...HEAD lists only its file" '[ "$(git -C "$P1" diff --name-only aegonex/m1...HEAD)" = b.js ]'
 for k in 1 2; do
   git -C "$U" merge --no-ff --no-edit "aegonex/m1--p$k" >/dev/null
@@ -165,7 +165,7 @@ ok "folder clean" '[ -z "$(git -C "$U" status --porcelain)" ]'
 say "7 done m1: sync (takes t-typo), prove, close, land, clean up on one go"
 sync_ "$U"
 ok "sync merged the task's landing" '[ "$(cat "$U/README.md")" = "hello world" ]'
-ok "prove: done-whens run in the unit folder" '(cd "$U"; sh test.sh >/dev/null; test -f b.js; test -f c.js)'
+ok "prove: done-whens run in the unit folder" '(cd "$U" && sh test.sh >/dev/null) && (cd "$U" && test -f b.js) && (cd "$U" && test -f c.js)'
 ok "ignored files that go with the folder are listed" 'touch "$U/.env"; git -C "$U" status --short --ignored | grep -q "^!! .env"'
 rm -f "$U/.env"
 perl -pi -e 's/^- \[ \] M1 — api .*/- [x] M1 — api · closed 2026-09-26/; $_="" if /^  - /' "$U/ROADMAP.md"

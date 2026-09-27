@@ -100,6 +100,10 @@ Four scenario shapes need a trick:
   every ref, worktree, status, diff and origin ref; the brief turn must
   leave it unchanged. Every command starts with `cd "<session folder>" && `
   so an agent whose shell starts elsewhere never touches another repo.
+  From v0.5.1 the shell also keeps no `cd` between calls (a bare `cd`
+  changes nothing), a command that starts with its own `cd "<absolute
+  folder>" && ` takes no prefix, and the trace records each command
+  without the prefix.
 - Work the user asks for directly (a typo, a two-module change) names no
   skill: the prompt gives the project's `AGENTS.md` as the loaded
   instruction file and lists the skills, and the checks read the Working
@@ -348,3 +352,135 @@ traces:
 
 Latest state of each scenario: M2, M3, M6, M9, M12a, M12b, V1, V9 and
 V12 passed on their last run; M1 passed everything but the chained `cd`.
+
+## Results that shaped v0.5.1 (2026-09-27)
+
+The git labs: `tests/lifecycle.sh` 134/134 and `tests/multi-repo.sh`
+37/37 (git 2.54.0) on each of the three texts below: the chain rule, then
+Clean up's chain, then `cd "<P>"` dropped. Both labs now run a done-when,
+and Clean up's remove, as the chain in a subshell, the way a shell that
+keeps no `cd` runs it.
+
+The harness changed with the rule. Every call starts in an unrelated
+repository and keeps no `cd`; a command that starts with its own
+`cd "<absolute folder>" && ` runs as written. V10 now starts in the main
+folder, so its checks reach `.worktrees/m2` only through the chain.
+`chains.py` reads each trace. After the prefix it allows one command or
+the one chain, never for git or a read. Every install, test and done-when
+must carry its own `cd`, and none may run from the session folder or on
+the call after a bare `cd`. Clean up's remove must carry
+`cd "<main>" && `, and its `cd` may not stand in the folder it removes.
+Two harness faults were fixed along the way. `chains.py` first read only
+list lines, so V10's trace passed with no command found. `check.sh` did
+not write `final.diff`. The checks read only the leader's trace; a
+subagent's commands show only in its transcript, which the graders read.
+
+Round 1: six scenarios that run an install, a test, a done-when or a
+Clean up (M1, M3, V1, V9, V10, V12), Sonnet, one turn per message, graded
+as in v0.5. 2 of 6 passed (V1, V9).
+- Every install, test and done-when ran as one call in its folder:
+  - the leaders' 9 calls: V1's install, V10's seven checks over two
+    turns, and M1's test;
+  - M3's four reviewer test runs.
+  None ran in the session folder or after a bare `cd`.
+- V12 failed at Clean up. The agent left out the bare `cd "<main>"`, as
+  V9 and M3 also did, and M1 and M3 left out `cd "<P>"`. In this shell
+  that `cd` does nothing, but it is the same two-call pattern v0.5.1
+  removes. So Clean up's remove became the chain (design, v0.5.1).
+- M3 failed on two reads that chained a `cd` to the skill package:
+  `cd "<skills folder>" && find . -type f | sort`. That breaks
+  **Commands**, but it happened outside the project, and the harness line
+  offers the own-`cd` form to any command.
+- V10 and M1 failed for reasons outside v0.5.1:
+  - V10's go reviewed its own fix although a subagent tool was present.
+    Done step 7 says "without subagents, review it yourself".
+  - M1's go reply had no Opened line, because `backend/.worktrees/m3`
+    already existed.
+
+Round 2, on the text with Clean up's chain: V9, V12 and M3 on a fresh
+build, and M1 again (on the round 1 text: it runs init and its go, which
+Clean up's change does not touch). 2 of 4 passed (V9, V12).
+- Every Clean up remove ran as one call from the main folder: V9's,
+  V12's, and M3's in backend and in frontend. No bare `cd` anywhere.
+- Every install, test and done-when a leader ran was one call in its
+  folder (M1's test, M3's two). M3's writers and reviewers ran the
+  leader's `cd "<p>" && node --test`; V9's reviewer ran its grep the same
+  way.
+- Subagents in this harness never load the project's AGENTS.md, and the
+  Dispatch and Review prompts carry no command rule. V9's writer and
+  V12's reviewer each ran a check as one multi-line call, by absolute
+  path, so on the right files (design, v0.5.1 known limits).
+- M1 and M3 again left out `cd "<P>"`, as in every parent session so
+  far, and M3's grader failed that clause. So `repos.md` drops it
+  (design, v0.5.1).
+- M1 failed outside v0.5.1:
+  - a chained read of the skill package;
+  - admin's new AGENTS.md without the Repos section, which v0.5 round 4
+    wrote from the same text;
+  - the review done by the leader itself with the Agent tool present, as
+    in V10.
+  The Opened line was back, so round 1's miss was variance.
+- M3 failed outside v0.5.1, besides one chained read of the scenario
+  folder. The leader committed the task folders' note, quoting Leader
+  mode 5, "`<f>` work: commit it naming its files"; so turn 1 ended with
+  the land question, not the exit-first line.
+
+Round 3, on the final text (`cd "<P>"` gone): M1 and M3 on a fresh build.
+0 of 2 passed: M1 outside v0.5.1, M3 on its subagents' commands.
+- In the skills' steps, every command either leader ran that needs a
+  folder was one chain: M1's test, `cd "<P>/backend/.worktrees/m3" &&
+  node --test`, and M3's two Clean up removes, `cd "<P>/<r>" && git -C
+  "<P>/<r>" worktree remove "<P>/<r>/.worktrees/t-discount"`. Neither
+  trace has a bare `cd` or a chained read, and nothing ran from the
+  parent. Outside those steps, M3's leader chained `||` onto two checks
+  of the harness's output folder (turns 2 and 4, not in its trace).
+- All six of M3's test runs were by subagents, each in its part folder.
+  Three ended in an `; echo` of the exit code, which the leader's prompts
+  asked for ("exits with status 0", "note the exit code"), and the
+  frontend reviewer ran a bare `cd` before its chain; the writers also
+  put several commands in one call. The checks passed 37/37, since they
+  read only the leader's trace; the grader failed the test-form
+  expectation (design, v0.5.1 known limits).
+- M3 met every other expectation: the note written before dispatch and
+  left uncommitted, so turn 1 ended with the exit-first line; exit and
+  its commit per repo; one land question, backend first; frontend's
+  landed check before its Sync; both repos landed and cleaned up in that
+  order.
+- M1 failed outside v0.5.1, with 31/31 checks and setup in all three
+  repos (admin with the Repos section this time). The go reply again had
+  no Opened line, since `backend/.worktrees/m3` already existed (2 of 3
+  M1 runs), and the leader reviewed the step itself with the Agent tool
+  present, as in round 2.
+
+Latest state on the v0.5.1 text: V1, V9 and V12 passed on their last run;
+V10 and M1 failed only outside v0.5.1, and M3 only on its subagents'
+commands. The other scenarios were not rerun.
+
+Left for later (outside v0.5.1):
+- the review done by the leader itself with a subagent tool present (V10,
+  M1 twice), where Leader mode 2 and 4 and done step 7 allow it only
+  without subagents;
+- init's go without the Opened line when the unit folder already exists
+  (M1, 2 of 3 runs);
+- the Dispatch and Review prompts: no command rule, and Dispatch's
+  "commit there" for a part in `<f>` (V9, V12, M3);
+- Leader mode 2 and 5 commit `<f>` work, a note's HANDOFF.md included
+  (M3);
+- "Reply per part" does not say the report repeats the reviewer's line;
+- a task's `done when:` note line has no owner (note, lines 40-41);
+- a new AGENTS.md in a repo under a parent: `scaffold.md` does not name
+  the Repos section (M1);
+- reads by a relative path (V1, V9, M1);
+- `Next:` when there is no ROADMAP;
+- init's "no HEAD sha" against the New commits row;
+- the Thai example brief, which lacks the move rows;
+- in a parent session:
+  - note lines in English under a Thai reply, note's grep skipped, and
+    no Noted line;
+  - the note written after the parts merged, though section 7 puts it
+    before dispatch;
+  - the landed check not rerun after Sync: section 7 leaves it out,
+    though section 3 asks for it;
+  - the land order not shown as `(agent's call)`;
+  - the land go's paths without `<r>/`: section 7's reply form against
+    section 1.

@@ -105,6 +105,134 @@ context window fills up.
 11. A closed milestone leaves one lesson behind: done proposes turning a
     dead end into a rule in AGENTS.md, in the same commit.
 
+## v0.5.1 (2026-09-27): commands that need a folder, in any shell
+
+The defect (v0.5 Risk 14): v0.4 rule 3 runs the install as `cd "<f>"` on
+its own call, then the install command on its own call, and runs other
+commands "in the unit folder (the shell's working directory)". That
+assumes the shell keeps its folder between calls. Some harnesses start
+every call in the session's folder: Claude Code moves the shell back
+after a `cd` out of the session's folder (`Shell cwd was reset to
+<folder>`), and Codex-style harnesses take the folder as a parameter of
+each call. There the second call runs the install or the tests in the
+session's folder: the wrong checkout, or no project at all in a v0.5
+parent session. Agents that notice chain the two, `cd "<f>" && node
+--test`, against the rule (scenario M1, v0.5 rounds 1 and 4). A done-when
+check (done step 3, Leader mode's Review) has the same problem.
+
+Candidates, weighed for what a weaker model follows:
+1. One chain form, `cd "<absolute folder>" && <command>`, allowed only
+   for the commands that need a folder: an install, a test, a done-when.
+   Git stays `git -C "<folder>"`; reads take absolute paths. It works in
+   both kinds of shell: where a `cd` is kept, the chain leaves the shell
+   in the folder, as v0.4's `cd` did; where the shell resets, the command
+   still runs in the folder; a failed `cd` stops it before it runs
+   anywhere else. It is the form agents already reach for.
+2. Tool flags (`npm --prefix`, `node --test <folder>`, `make -C`, `go
+   -C`, `cargo --manifest-path`): no chain, but a form per tool, none for
+   a done-when script with relative paths, and not every flag moves the
+   working folder: `node --test <folder>` run from elsewhere finds the
+   folder's tests but runs them from the caller's folder, so a test that
+   reads a file by a relative path fails (checked on Node 26, where `npm
+   --prefix <folder> test` and the chain pass).
+3. A subshell, `(cd "<f>" && <command>)`: leaves the shell where it was,
+   but POSIX only, and one more form to learn.
+4. The harness's folder parameter (Codex's `workdir`): right where it
+   exists, but AGENTS.md cannot name one for every harness; an agent that
+   uses it breaks nothing, since the command runs in the folder.
+5. v0.4's two calls plus "chain them if the shell resets": two forms, and
+   the model must first know which shell it has; a wrong guess runs the
+   tests in the wrong folder with no error.
+
+Decision: 1. One form, written where each command runs, needs no
+knowledge of the shell, fails loudly on a wrong folder and keeps the rest
+of rule 3 checkable: an `&&` only after a leading `cd "<absolute
+folder>"`, followed by one command; `||`, `;`, `; echo $?` and `|| true`
+stay forbidden.
+
+The same form for Clean up's remove, decided after the first scenario
+round. v0.4 moves the shell out of `<f>` with `cd "<main>"` on its own
+call before Clean up, since Windows cannot delete a folder a shell stands
+in. Where the shell resets, that `cd` does nothing, and the agents left it
+out of every land (V9, V12, M3); where the shell keeps its folder, an
+agent that leaves it out stands in `<f>`, and on Windows the remove fails
+part-way. One call, `cd "<main>" && git -C "<main>" worktree remove
+"<f>"`, cannot be run apart from its `cd` and works in both kinds of
+shell.
+
+`repos.md`'s `cd "<P>"` goes too, decided after the second round. v0.5
+put it on its own call after every `cd` in a parent session, so that a
+shell left in one repo would not run the next repo's test there (Risk 6).
+The chain now names the folder of every command that needs one, so a
+shell left in a repo's folder changes only a command that already breaks
+**Commands** (a relative path). Where the shell resets, `cd "<P>"` does
+nothing, and the agents left it out of every parent session (M1 and M3,
+both rounds). A `cd` now appears only at the head of a chain.
+
+Changes (line counts: SKILL.md 1,415 unchanged, with init 323, plan 225,
+note 137, exit 352, done 378; `repos.md` 99, one fewer; `scaffold.md` 89;
+the AGENTS.md sections 43 lines, longest 125):
+- `assets/AGENTS.md`, in place under the same `(aegonex 0.4)` headings:
+  **Commands** allows `cd "<folder>" && <command>` for an install, a
+  test, a done-when and a remove; **Open** runs `cd "<f>" && <install>`
+  as one call; **Clean up** drops its bare `cd "<main>"` and removes the
+  folder as `cd "<main>" && git -C "<main>" worktree remove "<f>"`.
+- init: the go names the install as the one chain; a red flag, "I'll `cd`
+  into the unit folder, then run the install on the next call";
+  `scaffold.md` move step 9 is the chain, with the reason.
+- plan: the command rule and its red flag allow **Open**'s install.
+- done: a check, the tests and the install run as the chain; step 3
+  shows it; step 7.4's remove is the chain from `<main>`, with the reason;
+  the red flag names any other chain, or a check or a remove run on the
+  call after a bare `cd`.
+- done and `scaffold.md`: PowerShell 5.1, `Set-Location "<f>"` (Clean
+  up: `"<main>"`), then the command.
+- `repos.md`: sections 1 and 7 drop `cd "<P>"`.
+- exit: its command rule and red flag allow Remove's **Clean up** chain
+  (done step 7.4); it runs no install or test. note: the version only.
+- All five skills `0.5.1`. `tests/lifecycle.sh` runs its two done-when
+  checks, and both labs run Clean up's remove, as the chain in a
+  subshell, as a shell that keeps no `cd` runs them; `tests/multi-repo.sh`
+  drops its `cd` into each repo before Clean up and its `cd "$P"` after
+  it; still 134 and 37 checks.
+
+Kept: git as `git -C` and reads by absolute path, never a `cd` for
+either.
+
+Known limits:
+- Windows PowerShell 5.1 has no `&&`: the line does not parse and
+  nothing runs. The fallback, `Set-Location` then the command, needs a
+  shell that keeps its folder. PowerShell 7, cmd, bash, zsh and dash run
+  the chain.
+- Projects set up before v0.5.1 keep their copy of the sections: setup
+  appends only a missing section, and the headings stay `(aegonex 0.4)`.
+  The skills carry the rule for their own steps; an agent without them
+  reads the old two-call rule there.
+- The Dispatch prompt (Leader mode 3) names the install command, not the
+  chain, and neither it nor Review's prompt carries the command rule
+  (their lines are full). A subagent that does not load the project's
+  AGENTS.md (none did in the scenario harness) keeps the rule only as far
+  as the leader writes it. Every subagent test ran in its part folder,
+  but V9's writer and V12's reviewer each ran a check as one multi-line
+  call. In M3's last round three of six test runs ended in an `; echo` of
+  the exit code, which the leader's prompts asked for, and a reviewer ran
+  a bare `cd` before its chain.
+- Where the shell keeps its folder, the chain leaves it in `<f>`, as
+  v0.4's `cd` did, and Clean up's leaves it in `<main>`; in a parent
+  session nothing takes it back to `<P>`.
+- Leader mode's Integrate removes a part folder as `git -C "<f>" worktree
+  remove "<p>"`, with no `cd`, as in v0.4: a Windows shell that keeps its
+  folder and still stands in `<p>` (after that part's install) fails
+  part-way. **Commands** lists a remove among the chains, so an agent may
+  run `cd "<f>" && ` first; the Integrate line has no room to show it.
+- The chain form spread to reads: in four scenario turns an agent listed
+  a folder outside the repos with `cd "<folder>" && find ...`, against
+  **Commands**: the skill package three times, the scenario folder once,
+  none in the last round. Nothing was changed; the check flags it.
+
+The labs and the agent scenarios, run in a harness that starts every call
+in an unrelated folder, are in `docs/testing.md`.
+
 ## v0.5 spec (2026-09-27): a project made of several repos
 
 Why: v0.4 is written for one git repo. The owner's projects are mostly a
@@ -219,7 +347,9 @@ sends it to `repos.md`, whose section for that skill replaces the step.
 - Each repo is a v0.4 project with `<main>` = `<P>/<r>`; each skill runs
   its steps per repo, rows and reply lines led by `<r>: `, paths written
   `<r>/.worktrees/<u>`. After every `cd` (an install, a test, Clean up's
-  `cd "<main>"`), `cd "<P>"` on its own call; git stays `git -C`.
+  `cd "<main>"`), `cd "<P>"` on its own call; git stays `git -C`. (v0.5.1:
+  each of those `cd`s heads its command's one call, `cd "<folder>" && `,
+  and `cd "<P>"` is gone.)
 - init (section 5) glances at each repo (`worktree list`, `branch
   --show-current` and status of `<main>`, its AGENTS.md and ROADMAP.md),
   with v0.4 steps 1-4 in full only for a repo with a unit folder, a main
@@ -297,11 +427,11 @@ check, always run (a provider cleaned up earlier on this go passes);
 **Sync** as `aegonex-done` step 2 says, so a unit opened before the
 Repos-section commit carries it and a moved Base is merged; the check
 again, since Sync may bring a record in; **Land**; **Clean up**;
-`cd "<P>"`. A repo that does not finish Clean up stops the repos after it,
-which stay as they were. The reply is a line per repo in the v0.4 form,
-led by the repo, then `Next:`. Asked to, the leader lands alone the repos
-whose parts are all integrated; a consumer among them still needs its
-check.
+`cd "<P>"` (dropped in v0.5.1). A repo that does not finish Clean up
+stops the repos after it, which stay as they were. The reply is a line
+per repo in the v0.4 form, led by the repo, then `Next:`. Asked to, the
+leader lands alone the repos whose parts are all integrated; a consumer
+among them still needs its check.
 
 A milestone pair closes with `aegonex-done`, one unit per run, v0.4
 unchanged per repo, so every stop stays a plain v0.4 state (section 10).
@@ -421,7 +551,9 @@ that the AGENTS.md bullet of that name picks, where a task record sits.
 `assets/AGENTS.md` does not change: its two sections stay 43 lines under
 `(aegonex 0.4)` headings, since init decides that setup is due from them
 and a `0.5` heading would re-run setup in every existing project. A repo
-of a multi-repo project carries 43 + 7 aegonex lines.
+of a multi-repo project carries 43 + 7 aegonex lines. (v0.5.1 rewrote the
+Commands, Open and Clean up bullets in place: still 43 lines, the same
+headings.)
 
 Line budget (`wc -l`), raised by owner decision 1:
 
@@ -455,7 +587,9 @@ folder is a repo root (Risk 11). `assets/AGENTS.md`, `assets/CLAUDE.md`,
 `assets/ROADMAP.md`, `assets/HANDOFF.md` and `pull-request.md` are
 byte-identical; `scaffold.md` only says outright that setup never adds
 `.worktrees/.gitignore` (it ignores itself; never `add -f`); `tests/lifecycle.sh` (134 checks
-since v0.4.1) does not change.
+since v0.4.1) does not change. v0.5.1 changes one thing in every project:
+an install, a test, a done-when and Clean up's remove run as
+`cd "<folder>" && <command>`.
 
 ### Left out of v0.5
 
@@ -492,7 +626,10 @@ since v0.4.1) does not change.
    only the written rule and the uncommitted-ROADMAP stop protect it
    (decision 8). Git refuses racing pushes and worktree adds.
 6. Shell drift: holding `<P>`, and `cd "<P>"` after each `cd`, are new
-   wording that weaker models may skip.
+   wording that weaker models may skip. (v0.5.1: a command that needs a
+   folder names it, `cd "<folder>" && <command>`, so drift no longer runs
+   a test in the wrong folder, and `cd "<P>"` is dropped: the agents
+   skipped it in every parent session.)
 7. Cost: a parent init is about 5 calls per quiet repo and 12-15 per busy
    one; a 5-repo brief is near the 25-line limit.
 8. A breaking provider change landed first breaks the old consumer on
@@ -511,7 +648,9 @@ since v0.4.1) does not change.
 14. A shell that goes back to its start folder on every call (some
     harnesses) cannot run v0.4's `cd "<f>"`, then the command, as two
     calls; agents chain them with `&&` (scenario M1, rounds 1 and 4). A v0.4
-    rule; left for a later version.
+    rule; left for a later version. Resolved by v0.5.1: one chain form,
+    `cd "<absolute folder>" && <command>`, for an install, a test, a
+    done-when and Clean up's remove.
 
 ### Tests
 
@@ -547,7 +686,9 @@ check).
 
 Planned agent scenarios (Sonnet, one turn per message). Every turn
 snapshots each repo and asserts that `shop/.git` is absent; no trace holds
-`git init`, `clone`, `--force`, `reset --hard`, `stash` or `&&`.
+`git init`, `clone`, `--force`, `reset --hard`, `stash` or `&&` (v0.5.1:
+but `cd "<folder>" && <command>` for an install, a test, a done-when or
+Clean up's remove).
 - M1 parent init "เริ่มงาน" (`--no-repos-section`): a row per repo,
   frontend `land หลัง backend M3`, a Setup row naming admin (full setup)
   and backend and frontend (the Repos section), first step backend M3
@@ -603,7 +744,8 @@ All 11 accepted as recommended:
 ### Implementation (2026-09-27)
 
 - The procedure lives in one reference file,
-  `skills/aegonex-init/references/repos.md` (100 lines, sections 1-11).
+  `skills/aegonex-init/references/repos.md` (100 lines, sections 1-11;
+  v0.5.1: 99, without `cd "<P>"`).
   Every skill points to it with one line when its `worktree list` fails
   with `not a git repository` (init's takes two, with "never `git init` or
   write anything in `<here>`"); single-repo projects never read it.
@@ -621,7 +763,8 @@ All 11 accepted as recommended:
     the Repos heading), and the Repos heading in 7.4.2's online test: when
     it alone is not online, Clean up goes on with `-D`.
   - total 1,415.
-- The v0.4 sections of `assets/AGENTS.md` are unchanged at 43 lines.
+- The v0.4 sections of `assets/AGENTS.md` are unchanged at 43 lines
+  (v0.5.1: Commands, Open and Clean up rewritten in place, still 43).
 - `tests/multi-repo.sh` passes 37 of 37 and `tests/lifecycle.sh` 134 of
   134; the agent scenario results are in `docs/testing.md`.
 - A review round (22 confirmed findings) and the first scenario round
@@ -755,7 +898,10 @@ syncs, scans and lands).
    `git -C "<absolute folder>" ...`, even when the shell (or a harness
    prefix) already stands in that folder, after a go too; no `cd` to run a
    read. The install runs as `cd "<f>"` on its own call, then the install
-   command on its own call (lifecycle 3).
+   command on its own call (lifecycle 3). v0.5.1: an install, a test and a
+   done-when run as one call, `cd "<absolute folder>" && <command>`, and
+   Clean up's remove as `cd "<main>" && git -C "<main>" worktree remove
+   "<f>"`: the only chains, since a shell may not keep a `cd` between calls.
 4. Never `--force`, `--no-verify`, `reset --hard`, `stash`, `add -A`; never
    delete an online branch; `branch -D` only after the pushed check.
 5. Nothing moves `<main>`'s branch unless `<main>` is on `<Base>`.
@@ -804,7 +950,8 @@ in place.
    `apply --3way` with the patch and `restore --staged -- <files>`
    (because `--3way` stages what it applies); step 9, only when step 7
    added the folder, is the install as in Open (`cd "<unit folder>"`, then
-   the install command, each its own call, once); step 10 is `rm
+   the install command, each its own call, once; v0.5.1: one call, `cd
+   "<unit folder>" && <install command>`); step 10 is `rm
    "<main>/.worktrees/move.patch"` (PowerShell `Remove-Item -LiteralPath`).
    Init's go runs the recipe's steps 1 to 5, then update and setup, then
    steps 7 to 10. Updating before setup keeps the setup commit on top of
@@ -824,7 +971,8 @@ in place.
 3. **Open**: `worktree prune`, `worktree add "<main>/.worktrees/<u>"
    aegonex/<u>` if the branch exists, else `worktree add -b aegonex/<u>
    ... <Base>`; then `cd "<f>"` on its own call and the install command on
-   its own call (an install line of `none` is skipped). A failed install
+   its own call (v0.5.1: one call, `cd "<f>" && <install command>`; an
+   install line of `none` is skipped). A failed install
    is quoted by its first error line as printed and the work goes on: no
    retry, no diagnosis, no command outside the project (never `sudo`). A
    new name whose `<remote>/aegonex/<u>` exists: a task takes `-2`; a
@@ -957,7 +1105,9 @@ in place.
    nothing in `<main>` (a file written, checked out or restored there is a
    red flag), `commit --allow-empty -m "chore: close <u>"`, Land, then
    **Clean up**: `cd "<main>"`, `merge-base --is-ancestor aegonex/<u>
-   <remote>/<Base>`, **Update**, `worktree remove`, `branch -d`. The reply
+   <remote>/<Base>`, **Update**, `worktree remove`, `branch -d` (v0.5.1: no
+   `cd "<main>"` of its own; the remove is one call, `cd "<main>" && git -C
+   "<main>" worktree remove "<f>"`). The reply
    is exactly the two plain lines of rule 2, the second the brief's `Next`
    row: ``Next: `aegonex-plan` for M3; type `/clear` first``.
 9. **Update** (done Clean up 2, init): `<main>` on `<Base>`; `merge
@@ -1043,7 +1193,7 @@ in place.
 | note | 115 | 136 | clock read, names-kept secret rule checked with `git grep`, the not-closed milestone folder, `Not saved` when no folder is open; fix round 2: 120 characters by eye, the why shortened first; fix round 3: a why only when given, the kind's repeated words cut first |
 | exit | 302 | 348 | state folder, `-C` git facts (C26), carry and correct (C20), never ticks a milestone line (A1), `docs:` only for working documents (A3), `AIDEV-TODO(<unit>)` (C19), step 9 cites done's Sync, scan and push reading; HANDOFF in the reply's language, the waiting-milestone Current work row; fix round 2: every written line in the reply's language, a task's decisions and the waiting line as Notes, the plain-text unfinished-landing reply; fix round 3: the template read by its path, never `ls` or `find`, a why only when given, each Stopped at line's commit state, a command done-when ticked only on a run here |
 | done | 216 | 373 | unit resolution, closed/online, stop checks, Sync with the local-Base guard, task checks, tests once (C22), install first (D7), scan, Land, Clean up with Update, HANDOFF never deleted (A2); every check runs, `not run: <runner> missing`; the pull-request path in `references/pull-request.md` (56 lines, limit 70); fix round 2: distinct checks, facts read from files, a table of failures only, a reviewed first step on go, Clean up at once when merged; fix round 3: step 1 first on a go too, the retro rule in `<f>/AGENTS.md` and nothing written in `<main>`, every check again after the reviewed fix under a `Fixed:` or `FAIL:` line, the two-line after-go reply with `Next:`; fix round 4: every check anew after the fix's commit |
-| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters (v0.4.1: exit 349, total 1,400, sections 43 lines) (v0.5: init 323, plan 225, note 137, exit 352, done 378, total 1,415; repos.md 100; Repos section 7 lines) |
+| total | 1,077 | 1,399 | limit 1,400; largest file 373, limit 380; the AGENTS.md sections 42 lines, none over 125 characters (v0.4.1: exit 349, total 1,400, sections 43 lines) (v0.5: init 323, plan 225, note 137, exit 352, done 378, total 1,415; repos.md 100; Repos section 7 lines) (v0.5.1: the same) |
 
 Duplication: 23 single lines appear in two or more skills, all of them
 frontmatter keys, section headings, table header and template rows, the
@@ -1122,8 +1272,12 @@ format; `GIT_TERMINAL_PROMPT`; the jest row; the identity lint.
 
 Single `git -C "<absolute folder>"` lines, never a `cd` for git; other
 commands run in the unit folder (the shell's working directory, or a
-`cd "<f>"` line of their own, which the install always has); Clean up
-first moves the shell to `<main>` so Windows can delete the folder. A
+`cd "<f>"` line of their own, which the install always has; v0.5.1: an
+install, a test or a done-when as `cd "<f>" && <command>`, one call, since
+a shell may not keep a `cd`; PowerShell 5.1 has no `&&`); Clean up
+first moves the shell to `<main>` so Windows can delete the folder
+(v0.5.1: in the remove's own call, `cd "<main>" && git -C "<main>"
+worktree remove "<f>"`). A
 file is deleted with `rm` on one quoted path per line (PowerShell
 `Remove-Item -LiteralPath`), never `-r` or `-f`. `gh` is optional and
 runs only for a host URL remote; git 2.23+ suffices (`switch`,

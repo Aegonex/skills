@@ -4,7 +4,7 @@ description: Use the moment something happens in a session that git cannot recon
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.5.0"
+  version: "0.5.1"
 ---
 
 # aegonex-note

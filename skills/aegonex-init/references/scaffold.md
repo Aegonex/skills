@@ -4,9 +4,8 @@ Read this when `aegonex-init`'s brief names setup (`AGENTS.md`, `CLAUDE.md`
 or the two sections missing) or a `Will move` row. Before go, derive only;
 after go, write. Every command, read-only ones included, is its own tool call
 on one line, with no `&&`, `||` or `;`; its exit code comes from the tool
-result, never `; echo $?` or `|| true`. Git is always `git -C "<absolute folder>"`,
-even where the shell already stands; the one `cd` is move step 9's, for the install.
-Files are written with the file tool in UTF-8.
+result, never `; echo $?` or `|| true`. Git is always `git -C "<absolute folder>"`, even where the shell already
+stands; the one chain is move step 9's install. Files are written with the file tool in UTF-8.
 
 ## Before the brief: derive, do not write
 
@@ -83,7 +82,8 @@ runs steps 1 to 5, then its update and setup, then 7 to 10.
    `git -C "<unit folder>" restore --staged -- <files>`, leaving out
    conflicted ones, so the changes arrive as they were: new files
    untracked, changes unstaged.
-9. Install, only when step 7 added the folder (**Open** in `AGENTS.md`): `cd "<unit folder>"`, then the
-   install command (`none`: skip), each its own call, once; a failure: quote its first error line, no retry, go on.
+9. Install, only when step 7 added the folder (**Open** in `AGENTS.md`), once, as one call, since a shell may not
+   keep a `cd` between calls: `cd "<unit folder>" && <install command>` (`none`: skip; PowerShell 5.1 has no `&&`:
+   `Set-Location "<unit folder>"`, then the command); a failure: quote its first error line, no retry, go on.
 10. `rm "<main>/.worktrees/move.patch"` (PowerShell: `Remove-Item -LiteralPath "<main>\.worktrees\move.patch"`).
 The moved changes stay uncommitted in the unit folder.

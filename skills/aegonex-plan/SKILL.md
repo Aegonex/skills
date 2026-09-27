@@ -4,7 +4,7 @@ description: Use when a project needs its next milestone planned — there is no
 license: MIT
 metadata:
   author: Aegonex
-  version: "0.5.0"
+  version: "0.5.1"
 ---
 
 # aegonex-plan
@@ -49,9 +49,9 @@ the English. `ROADMAP.md` content follows the same language; its headings do not
 
 ### 1. Read the testimony
 
-Every command, reads included, is its own tool call on one line: no `&&`, `||` or `;`; an exit code
-comes from the tool result, never `; echo $?` or `|| true`. Every git command is `git -C "<absolute folder>"`,
-even when the shell or a harness prefix already stands in that folder; never `cd` to run one.
+Every command, reads included, is its own tool call on one line: no `&&`, `||` or `;` (one chain: **Open**'s install,
+`cd "<f>" && <install>`); an exit code comes from the tool result, never `; echo $?` or `|| true`. Every git command is
+`git -C "<absolute folder>"`, even when the shell or a harness prefix already stands in that folder; never `cd` to run one.
 `<here>` is the folder the session opened in (removed since: the shell's folder); `not a git repository` there: read `../aegonex-init/references/repos.md` and follow it.
 `git -C "<here>" worktree list --porcelain`: its first `worktree ` path is `<main>`;
 a `branch refs/heads/aegonex/m<n>` line marks the open milestone folder. Read `ROADMAP.md`
@@ -209,7 +209,7 @@ Any clear yes is go (go, ok, yes, ได้, โอเค, ลุย):
 - A message with two question marks in it.
 - A question numbered 8.
 - A write other than `ROADMAP.md`, or any write before go.
-- A `git commit` other than `docs: plan M<n>`, `&&` `||` `;` in a command, or a git command without `-C "<absolute folder>"`.
+- A `git commit` other than `docs: plan M<n>`, `&&` `||` `;` in a command other than **Open**'s install, or a git command without `-C "<absolute folder>"`.
 - A step whose `done when` is "works", "is complete" or "looks good".
 
 ## Quick reference
