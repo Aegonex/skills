@@ -1658,3 +1658,110 @@ Sonnet subagents on copied fixtures, a judge checks the disk.
 All five skills ship as `0.2.0`. `README.md` gains the `aegonex-plan`,
 `aegonex-note` and `aegonex-done` rows and install lines. `skills/aegonex-init/assets/HANDOFF.md` and
 `assets/ROADMAP.md` are deleted from init (moved to exit and plan).
+
+## Review by a fresh subagent whenever the tool exists (2026-09-27)
+
+The defect (the first item v0.5.1 left for later): the leader reviewed
+its own work while the harness offered a subagent tool. V10's go on a
+cannot-close brief fixed a one-line check, reviewed the fix itself and
+marked the line `(review not independent)`. M1's go, in a parent folder,
+ran backend's milestone step and reviewed it itself in both v0.5.1 runs.
+R2 (v0.4) says a separate reviewer checks every part, even a one-part
+typo fix, and only a harness without subagents gets the marker.
+
+The wording let a model take the other branch:
+- Leader mode 2, `(with subagents; none: part by part in <f>: edit,
+  **Review**, commit on PASS before the next)`. `none` has no noun, so it
+  read as "no part folders", which is the path for one part in `<f>`, and
+  there **Review** sits between two things the leader does. M1's trace
+  says so: "the step was one file in one folder, so Leader mode ran it
+  directly".
+- Leader mode 4, `a fresh read-only subagent, not its writer (none: you)`.
+  `none` can again mean "no separate writer", which is the case whenever
+  the leader wrote the part.
+- Done step 7, `without subagents, review it yourself before that
+  commit` and `the parenthesis only without subagents`. "Without
+  subagents" reads as a choice, not a missing tool, and all three reply
+  templates carried the marker, so the line to copy was the self-review
+  one.
+
+Candidates:
+1. Name the condition as the tool, in each place the self-review branch
+   appears, and take the marker out of the lines to copy.
+2. One sentence at the head of Leader mode, "you review only with no
+   subagent tool": the sections are 43 lines and every line is full.
+3. A writer subagent for a part in `<f>` too (Dispatch): the rule is
+   about who reviews, whoever wrote the part, and the Dispatch sentence
+   is other work.
+4. Leave the text and rely on the scenario prompts: M1's and V10's
+   prompts name no subagent tool, and neither does a real session.
+
+Decision: 1, in two rounds, under the same `(aegonex 0.4)` headings.
+
+Round 1 changed the three places:
+- Leader mode 2: `**Part folders** for 2+ parts with a subagent tool
+  (else one by one in <f>: edit, **Review**, commit on PASS)`. The path in
+  `<f>` became the else of that condition, for one part or for no tool.
+  `before the next` went for room, since `one by one` says it.
+- Leader mode 4: `**Review** every part, a one-line fix in <f> too: a
+  fresh read-only subagent (no subagent tool: you) runs the done-when,`.
+  The only branch to the leader is a missing tool. `not its writer` went:
+  `fresh` already excludes the writer, and the tool condition excludes a
+  leader that wrote the part. Its last line, `by you: end (review not
+  independent)`, is unchanged.
+- Done step 7: "A fresh read-only subagent reviews it, a one-line fix
+  too, whenever you have a subagent tool; with no subagent tool, you
+  review it yourself before that commit." The lines under the title
+  became `Fixed: <files> committed` / `แก้แล้ว: commit <files>` and
+  `FAIL: <evidence>`, followed by "a review of your own ends it with
+  `(review not independent)`, never translated".
+
+V10 passed on round 1 and M1 did not. M1's leader again reviewed the step
+itself, citing Leader mode's "one part in `<f>`" path "(edit, review,
+commit directly)". It never quoted item 4. Item 2's else still listed
+**Review** between two things the leader does and named no reviewer, and
+subagents appear only with "2+ parts" and Dispatch's writers. A model
+that takes item 2's one-part path as complete never reaches item 4.
+
+Round 2 names the reviewer where the one-part path is read. Leader mode 2
+is now `**Part folders** for 2+ parts with subagents (else one by one in
+<f>: edit, subagent **Review**, commit on PASS)`. `with a subagent tool`
+went back to `with subagents` for the room. With no subagent tool,
+`subagent **Review**` still leads to the leader through item 4's
+parenthesis: item 2 names the usual reviewer, and the exception stays in
+one place. Leader mode 4 and done step 7 keep round 1's text.
+
+On the final text, V10 and M1 ran twice each (`docs/testing.md`). All
+four leaders started a fresh reviewer after the edit and before any
+commit, none reviewed its own part, and no reply carried the marker.
+Those that failed did so on what the review read or what followed a
+FAIL.
+
+Counts: SKILL.md 1,415 lines, unchanged (done 378, and step 7 keeps its
+9 lines). The AGENTS.md sections stay at 43 lines, the longest 125. The
+`version:` lines are left for the land.
+
+Known limits:
+- Projects set up before this change keep their copy of the sections:
+  setup appends only a missing section, and the headings stay. Their
+  Leader mode still says `(none: you)`. Done step 7 carries the rule for
+  its own fix; other work there reads the old text.
+- Whether a subagent tool exists is the agent's own judgement. A harness
+  that offers one only after a tool search may still read as having none.
+- An independent reviewer knows less than the leader. In V10 rounds 2
+  and 3 the reviewer failed a correct fix on `docs/scratch/try.md`, a
+  Scratch file that was there before it: item 4's "new files" and step
+  7's "every new file" do not say new since when. After that FAIL, round
+  2's leader started a second reviewer with a prompt that argued against
+  the first and committed on its PASS; round 3's replied `FAIL:` as step
+  7 says, but step 7 then reruns the checks on the uncommitted fix, and
+  the next go would commit it as `wip` unreviewed. Leader mode 4 and 5
+  do not say a FAIL stands.
+- Leader mode 4 lists what the reviewer reads but gives no prompt to hand
+  over. M1's leaders narrowed the diff to one file, and round 3's left
+  out status and new files. No prompt carried the whole command rule:
+  reviewers ran `; echo` of the exit code and `;`-chained git or reads.
+  A general-purpose reviewer has write tools and is read-only only by
+  its prompt.
+- Each of these sits in the Review prompt, item 5 or step 7's FAIL path,
+  which are other work; this change leaves them as they were.

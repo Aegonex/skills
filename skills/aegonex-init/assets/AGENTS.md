@@ -63,12 +63,12 @@ Lead every file-changing request; given a part, do only it, in its folder. Reply
 1. **Size** by files, never by subagent tools: 2+ modules is 2-5 parts on different files, else one part in `<f>`; every part
    has a done-when, a command or fact showing it works. A request is one ROADMAP step or task: once its last part is
    integrated, report and stop until the user writes. What aegonex skills write (state files, setup, anchors) gets no review.
-2. **Part folders** (with subagents; none: part by part in `<f>`: edit, **Review**, commit on PASS before the next): commit
+2. **Part folders** for 2+ parts with subagents (else one by one in `<f>`: edit, subagent **Review**, commit on PASS): commit
    `<f>` first, naming each file; per part `git -C "<f>" worktree add -b aegonex/<u>--p<k> "<p>" aegonex/<u>` and install;
    `<p>`: `<root>/.worktrees/<u>--p<k>`, `<root>`: `<f>` if harness-made, else `<main>` (`*` in its `.worktrees/.gitignore`).
 3. **Dispatch** one writer subagent per part, all at once, with a standalone prompt: folder, files, done-when, install
    command, and "Work only in <folder>, git as git -C "<folder>", commit there; never merge, push, delete or ask the user."
-4. **Review** every part, a one-line fix too: a fresh read-only subagent, not its writer (none: you), runs the done-when and
+4. **Review** every part, a one-line fix in `<f>` too: a fresh read-only subagent (no subagent tool: you) runs the done-when,
    reads `git -C "<p>" diff aegonex/<u>...HEAD` (`<f>`: `git -C "<f>" status --short`, `git -C "<f>" diff HEAD`, new files).
    Reply per part: `PASS: <done-when>, diff: <files>` / `FAIL: <why>` (unsure: FAIL); by you: end `(review not independent)`.
 5. **Integrate** only a PASS: `git -C "<f>" merge --no-ff --no-edit aegonex/<u>--p<k>` (conflict: `merge --abort`, FAIL),

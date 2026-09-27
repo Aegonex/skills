@@ -285,13 +285,13 @@ answer is not.
 
 A go on a cannot-close brief (other than step 1's Uncommitted one) runs only its first step, as one part in `<f>` under
 the Leader mode of `AGENTS.md`: **Review** reruns the check the fix is for and reads the status,
-`git -C "<f>" diff HEAD` and every new file; a PASS is committed naming its files (**Integrate**); without subagents,
-review it yourself before that commit. A first step that is the install command is just run. That go closes, lands and
-removes nothing: after the first step and its commit (if any) the skill runs again from step 3, every check anew (the
-review's too, never its result), and the reply is the new brief with one line under its title, no sha, in place of
-**Review**'s `PASS:` or `FAIL:` line: after a committed fix `Fixed: <files> committed (review not independent)` /
-`แก้แล้ว: commit <files> (review not independent)`, after a FAIL `FAIL: <evidence> (review not independent)`; the
-parenthesis only without subagents and never translated.
+`git -C "<f>" diff HEAD` and every new file; a PASS is committed naming its files (**Integrate**). A fresh read-only
+subagent reviews it, a one-line fix too, whenever you have a subagent tool; with no subagent tool, you review it
+yourself before that commit. A first step that is the install command is just run. That go closes, lands and removes
+nothing: after the first step and its commit (if any) the skill runs again from step 3, every check anew (the review's
+too, never its result), and the reply is the new brief with one line under its title, no sha, in place of **Review**'s
+`PASS:` or `FAIL:` line: after a committed fix `Fixed: <files> committed` / `แก้แล้ว: commit <files>`, after a FAIL
+`FAIL: <evidence>`; a review of your own ends it with `(review not independent)`, never translated.
 
 Otherwise the go runs, one command per line:
 1. `git -C "<f>" rm -- <tracked candidates>`; each untracked candidate is removed as

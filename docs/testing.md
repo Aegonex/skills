@@ -487,3 +487,144 @@ Left for later (outside v0.5.1):
   - the land order not shown as `(agent's call)`;
   - the land go's paths without `<r>/`: section 7's reply form against
     section 1.
+
+## Results: review by a fresh subagent whenever the tool exists (2026-09-27)
+
+The git labs: `tests/lifecycle.sh` 134/134 and `tests/multi-repo.sh`
+37/37 (git 2.54.0), on the round 1 text and on the final text, each run
+with `AEGONEX_RUN` under the session scratchpad. The real repository's
+refs were the same before and after.
+
+The harness is v0.5.1's, copied, with one rule added. V10's go and M1's
+go expect the step's **Review** to be a fresh read-only subagent, started
+after the edit and before the commit, never the leader or the part's
+writer, and a reply line without `(review not independent)`. A leader
+that reviews its own part fails, with or without the marker; only an
+agent with no subagent tool may. The grader's `subagents_used` item now
+asks who reviewed each part, when, and what the reviewer ran. `check.sh`
+(V10) and `mcheck.sh` (M1) gained two turn-2 checks: the reply has no
+marker, and the trace names a reviewer the agent started. That second
+check, `revsec.sh`, reads the trace's "Subagents started" part or a list
+item led by "Subagent", and fails on "none". It took three tries: a grep
+for both words on one line missed V10 round 1's reviewer (two lines); an
+`awk` from the first "subagent" passed M1 round 1 on the leader's own
+review line; the section-only form missed M1 round 2's list item. The
+graders read the transcripts and each reviewer's `.meta.json`
+(`parentAgentId`), so no verdict rested on these checks.
+
+Round 1, on the first text (Leader mode 2 `for 2+ parts with a subagent
+tool (else one by one in <f>: edit, **Review**, commit on PASS)`, Leader
+mode 4 and done step 7 as they stand now): V10 and M1, Sonnet, one turn
+per message. 0 of 2 passed; the rule held in V10 only.
+- V10 held the rule. The leader fixed `REFRESH_WINDOW_S`, then started a
+  fresh general-purpose reviewer, which reran `bash
+  tests/check-refresh.sh` in `.worktrees/m2` and read `status --short`
+  and `diff HEAD`. It returned PASS, and then the leader committed. The
+  new brief read `Fixed: src/auth.ts committed`, without the marker. The
+  checks passed 20/21 (with `revsec.sh`). The grader failed turn 1 on a
+  chained read, `cd "<m2>" && grep -n ... src/auth.ts`, used to see which
+  condition of the check failed: v0.5.1's known limit, outside this
+  change.
+- M1 failed the rule. The leader wrote the test and reviewed it itself:
+  it ran `node --test`, read no status or diff, and committed. Its trace
+  says the step "touched one file group in one folder, so Leader mode's
+  "one part in `<f>`" path was used (edit, review, commit directly)". It
+  never quoted item 4. The grader traced the choice to item 2's else,
+  which listed **Review** between two things the leader does and named
+  no reviewer. The reply had no marker either, so a self-review read as
+  independent. Checks 32/33 (with `revsec.sh`).
+
+Round 2, on the final text (item 2's else reads `edit, subagent
+**Review**, commit on PASS`): V10 and M1 on a fresh build. 0 of 2 passed,
+but the rule held in both.
+- M1 held the rule. The leader wrote the test, ran `node --test`, then
+  started a fresh Explore (read-only) subagent, "Independent review of
+  discount test". The reviewer ran `cd "<m3>" && node --test`, `git -C
+  "<m3>" status --short` and `git -C "<m3>" diff HEAD --
+  test/cart.test.js`, and returned `PASS: node --test passes, diff:
+  test/cart.test.js`. The leader committed after that. The reply opened
+  with `**เปิดแล้ว:** backend/.worktrees/m3` and ended with the reviewer's
+  PASS line, without the marker. Checks 33/33. The grader failed one
+  clause outside this change: the PASS line is not led by `backend: `.
+  Repos section 7 shows that lead only for dispatched parts
+  (`frontend p1: PASS: ...`), and round 1's line lacked it too. The
+  leader's prompt also narrowed the reviewer's diff to the file it named.
+- V10 held the rule, and failed on what followed a FAIL. Both reviewers
+  were fresh general-purpose subagents, started after the fix and before
+  the commit. The first returned FAIL on `docs/scratch/try.md`, a Scratch
+  file that was there before the fix ("new files" does not say new since
+  when). The leader did not reply `FAIL: <evidence>` or redo the part. It
+  started a second reviewer on the same diff, whose prompt said a
+  previous reviewer "wrongly flagged" the file, and committed on its
+  PASS. The brief read `Fixed: src/auth.ts committed`, without the
+  marker, and did not mention the first FAIL. The checks passed 19/21.
+  One FAIL was a harness artefact: the agent mistyped the snapshot path,
+  so `after1.txt` was empty, and the grader found turn 1 wrote nothing
+  from the reflogs, the history and its tool calls. The other was a
+  chained read, `cd "<run>/V10" && ls -la`, run after the failed snapshot
+  command. Both reviewers ran `; echo` of the exit code and `;`-chained
+  git, as the leader's prompts invited.
+
+Round 3, on the same final text: V10 and M1 again on a fresh build, to
+see whether round 2's result on the rule was chance.
+1 of 2 passed (V10); the rule held in both.
+- V10 held the rule and passed, 21/21. The leader fixed the line, then
+  started a fresh Explore reviewer. The reviewer reran the check in
+  `.worktrees/m2` and read status and `diff HEAD`, then returned FAIL on
+  the same Scratch file: the leader's prompt asked it to list "any new
+  (untracked) files" and to fail on anything unexpected, and never said
+  the file was there before. The leader replied as step 7 says, `FAIL:
+  docs/scratch/try.md is untracked and unrelated to the fix`, committed
+  nothing, and ran every check again from step 3. The grader passed every
+  expectation and found a gap outside this change. After a FAIL the fix
+  stays uncommitted in `<f>`, so the checks pass on the working tree ("4
+  of 4 checks passed") while `aegonex/m2` still holds 120, the brief does
+  not name the file, and the next go's step 1 would commit the failed
+  fix as `wip: m2 before close` with no review.
+- M1 held the rule and failed on what its reviewer read. The leader
+  wrote the test, then started a fresh general-purpose reviewer, which
+  returned `PASS: node --test passes, diff: test/cart.test.js`; the
+  commit came after it. The checks passed 33/33. The leader's prompt
+  asked only for `node --test` and `git -C "<m3>" diff HEAD --
+  test/cart.test.js`, so the reviewer read no status, no whole diff and
+  no new files, which Leader mode 4 asks for; the grader failed the
+  review expectation on that. The report paraphrased the reviewer's line,
+  `ตรวจทานอิสระผ่านแล้ว (PASS)`, in a line led by `backend:`. The leader
+  also ran one chained read, `cd "<shop>/admin" && ls -pL ...`, that its
+  trace records without the `cd`.
+
+On the final text, all four leaders (V10 and M1, rounds 2 and 3) had a
+subagent tool and started a fresh reviewer after the edit and before any
+commit; none reviewed its own part, and no reply carried the marker. On
+round 1's text, V10 did the same and M1 did not. This closes the first
+item of v0.5.1's "Left for later". Every scenario that failed on the
+final text failed on what the review read or what followed a FAIL, not
+on who reviewed.
+
+Left for later (outside this change):
+- "new files" (Leader mode 4) and "every new file" (done step 7) do not
+  say new since when. An untracked Scratch file from before the fix read
+  as the fix's, and the reviewer failed a correct fix in V10 rounds 2 and
+  3 (v0.5.1's self-reviewing leaders never failed on it);
+- what follows a reviewer's FAIL: Leader mode 4 and 5 do not say it
+  stands (V10 round 2 started a second reviewer with a prompt that argued
+  against the first); after a FAIL on a go's fix, done step 7 reruns the
+  checks on the uncommitted fix, and the next go commits it as `wip`
+  unreviewed (V10 round 3);
+- the Review prompt: Leader mode 4 lists what the reviewer reads but no
+  prompt to hand over, so leaders narrowed the diff to one file and left
+  out status and new files (M1 rounds 2 and 3); the prompts carry no
+  command rule, and reviewers ran `; echo` of the exit code and
+  `;`-chained git or reads (V10 in every round, M1 round 3); a
+  general-purpose reviewer has write tools and is read-only only by its
+  prompt;
+- the report's review line: nothing says it repeats the reviewer's
+  `PASS:` line (M1 round 3 paraphrased it), and in a parent session the
+  line of a part in `<f>` is not led by its repo, since repos.md section 7
+  shows the lead only for dispatched parts (M1 round 2);
+- M1's turn-1 first step: round 2 left out its folder and the `set up
+  aegonex` preparation, and round 3 named only backend's setup, though
+  the go set up all three repos (repos.md section 5 does not say how);
+- reads chained to a `cd` (V10 rounds 1 and 2, M1 round 3), as in
+  v0.5.1; M1 round 3's is missing from its trace, which is all
+  `chains.py` reads.
